@@ -434,6 +434,39 @@ class CliTest(unittest.TestCase):
         expected = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
         self.assertEqual(expected, [{"status": "ok", "card_names": {}}])
 
+    def test_counters_and_kit_slots_may_differ_since_their_entities_are_dropped(self):
+        tmp = self.tmpdir()
+        fake = tmp / "fake_parser.py"
+        fake.write_text(
+            "import sys, json\n"
+            "raw = 'Fake' in open(sys.argv[1]).read()\n"
+            "extra = {'counters': [{'kind': 'x', 'value': 3}], 'slot': 1} if raw else {'slot': 0}\n"
+            "kit = {'powers': [dict(card='P', **extra)], 'trinkets': [dict(card='T', **extra)]}\n"
+            "minion = {'card': 'M', **({'counters': [1]} if raw else {})}\n"
+            "entry = {'kit': kit}\n"
+            "game = {'status': 'ok', 'rounds': [{'entries': [entry], 'replay': {'minions': [minion]}}]}\n"
+            "print(json.dumps({'games': [game]}))\n",
+            encoding="utf-8")
+        code, out, err = self.run_cli(noisy(duo_game()), "--parser", sys.executable, str(fake))
+        self.assertEqual(code, 0, err)
+        expected = json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+        kit = expected[0]["rounds"][0]["entries"][0]["kit"]
+        self.assertEqual(kit["trinkets"], [{"card": "T", "slot": 0}])
+
+    def test_other_kit_differences_still_refuse(self):
+        tmp = self.tmpdir()
+        fake = tmp / "fake_parser.py"
+        fake.write_text(
+            "import sys, json\n"
+            "raw = 'Fake' in open(sys.argv[1]).read()\n"
+            "kit = {'trinkets': [{'card': 'T' if raw else 'U', 'slot': 0}]}\n"
+            "game = {'status': 'ok', 'rounds': [{'entries': [{'kit': kit}]}]}\n"
+            "print(json.dumps({'games': [game]}))\n",
+            encoding="utf-8")
+        code, out, _ = self.run_cli(noisy(duo_game()), "--parser", sys.executable, str(fake))
+        self.assertNotEqual(code, 0)
+        self.assertFalse(out.exists())
+
     def test_writes_the_expected_report_next_to_the_fixture(self):
         tmp = self.tmpdir()
         fake = tmp / "fake_parser.py"

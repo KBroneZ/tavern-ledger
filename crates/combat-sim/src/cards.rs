@@ -32,6 +32,12 @@ pub enum Action {
     /// Summon `count` copies of a token, to the right of the card (or in
     /// its place when it died).
     Summon { token: &'static str, count: u8 },
+    /// Give the side's Deity stats (T-671): the awakened Deity on the
+    /// board, else the hidden one it will awaken as.
+    BuffDeity { attack: i32, health: i32 },
+    /// Summon the side's first `count` Aberrations that died this combat
+    /// (not Deities) with the stats they had when they died (Y'Shaarj).
+    SummonDeadAberrations { count: u8 },
     /// Give friendly minions stats; `others` leaves the card itself out.
     BuffAll {
         attack: i32,
@@ -115,6 +121,9 @@ pub enum Action {
     /// Give this minion's Attack, its full Health or both to another random
     /// friendly minion (Dark Gifts, `crate::gifts`).
     GiveOwnStats { attack: bool, health: bool },
+    /// Give this minion's Attack and full Health to every other friendly
+    /// minion (Fragrant Phylactery's mark, `crate::gifts::MARKS`).
+    GiveOthersOwnStats,
     /// Multiply this minion's Attack and Health (Dark Gifts).
     MultiplyStats { attack: i32, health: i32 },
     /// Gain the Attack of the minion to the left (Dark Gifts).
@@ -159,6 +168,19 @@ pub enum Action {
         tribe: Tribes,
         others: bool,
     },
+    /// For the rest of the combat the side's Beasts have this much more
+    /// Attack: those on the board now and those summoned later, even after
+    /// the card is gone (Humming Bird; T-645).
+    BeastAttackThisCombat(i32),
+    /// The side's Undead have this much more Attack this game, wherever they
+    /// are: those on the board gain it, and those summoned later in the
+    /// combat come with it, as the side's game-long Undead Attack
+    /// (Plaguerunner; T-645).
+    UndeadAttackThisGame(i32),
+    /// Give a random other friendly Beast the side's Lobster buff, `times`
+    /// over (2 for a golden Lobster), then improve the buff by +2/+1 (Tasty
+    /// Lobster; T-645).
+    LobsterBuff { times: i32 },
     /// Destroy the minion to the left (both neighbours with `both`) and keep
     /// an exact copy of each, not of a Stitched Salvager, for
     /// [`Action::SummonKept`] (Stitched Salvager; T-628 round 3).
@@ -325,29 +347,73 @@ const PLAIN: CardRules = CardRules {
 
 /// The rules for a card id. `None`: not modelled.
 pub fn rules(card_id: &str) -> Option<CardRules> {
-    let all = EFFECTS
+    if let Some((_, rules)) = effects().find(|(id, _)| *id == card_id) {
+        return Some(*rules);
+    }
+    no_combat_effect().any(|id| id == card_id).then_some(PLAIN)
+}
+
+/// How the engine plays a card (T-647): `None` when it does not know it,
+/// else "refused" (it does not play it, for a reason written down; or a
+/// board taken after the start of combat no longer shows what it needs),
+/// "approximate" or "exact".
+pub fn status(card_id: &str) -> Option<&'static str> {
+    let Some(rules) = rules(card_id) else {
+        return refused_ids().contains(&card_id).then_some("refused");
+    };
+    Some(if after_start_refusal(card_id).is_some() {
+        "refused"
+    } else if matches!(rules.fidelity, Fidelity::Approximate(_)) {
+        "approximate"
+    } else {
+        "exact"
+    })
+}
+
+/// The cards the engine knows and refuses to play, each with its reason
+/// written down (T-647).
+pub fn refused_ids() -> Vec<&'static str> {
+    crate::cards_round8::REFUSED
+        .iter()
+        .map(|(id, _)| *id)
+        .collect()
+}
+
+/// Every card id the engine models, once each, sorted (T-646).
+pub fn modelled_ids() -> Vec<&'static str> {
+    let ids: std::collections::BTreeSet<&'static str> = effects()
+        .map(|(id, _)| *id)
+        .chain(no_combat_effect())
+        .collect();
+    ids.into_iter().collect()
+}
+
+fn effects() -> impl Iterator<Item = &'static (&'static str, CardRules)> {
+    EFFECTS
         .iter()
         .chain(crate::cards_round2::EFFECTS_2)
         .chain(crate::cards_round3::EFFECTS_3)
         .chain(crate::cards_round4::EFFECTS_4)
         .chain(crate::cards_round5::EFFECTS_5)
         .chain(crate::cards_round7::EFFECTS_7)
-        .chain(crate::cards_round8::EFFECTS_8);
-    if let Some((_, rules)) = all.into_iter().find(|(id, _)| *id == card_id) {
-        return Some(*rules);
-    }
-    (NO_COMBAT_EFFECT.contains(&card_id)
-        || crate::cards_round8::NO_COMBAT_EFFECT_8.contains(&card_id))
-    .then_some(PLAIN)
+        .chain(crate::cards_round8::EFFECTS_8)
+}
+
+fn no_combat_effect() -> impl Iterator<Item = &'static str> {
+    NO_COMBAT_EFFECT
+        .iter()
+        .chain(crate::cards_round8::NO_COMBAT_EFFECT_8)
+        .copied()
 }
 
 /// The game builds the card rules were checked against: every modelled card
 /// was compared with the card texts (HearthstoneJSON) of the newest one,
 /// 254477; 253216 was checked in its own time, and its cards the patch to
-/// 254477 changed now play with the new numbers. A board from another build
-/// is still played, with a warning (D-145). Every build here is also in the
-/// parser's `TESTED_BUILDS` (a test in the tracker keeps that).
-pub const CHECKED_BUILDS: &[i64] = &[253216, 254477];
+/// 254477 changed now play with the new numbers; 255790's card data is
+/// byte-identical to 254477's. A board from another build is still played,
+/// with a warning (D-145). Every build here is also in the parser's
+/// `TESTED_BUILDS` (a test in the tracker keeps that).
+pub const CHECKED_BUILDS: &[i64] = &[253216, 254477, 255790];
 
 /// The build of a board when the rules were not checked against it; `None`
 /// when they were, or when the build is not known (nothing to warn about).
@@ -395,6 +461,39 @@ pub struct Token {
     pub golden: bool,
 }
 
+/// Tasty Lobster and its golden card, with how many times over each shows
+/// and gives the side's Lobster buff (T-645).
+pub const LOBSTERS: [(&str, i32); 2] = [("BG36_202", 1), ("BG36_202_G", 2)];
+
+/// The Lobster buff as the card's text gives it, and what each Lobster
+/// Deathrattle improves it by (T-645).
+pub const LOBSTER_STEP: (i32, i32) = (2, 1);
+
+/// The side's Lobster buff a minion shows: its two numbers, halved for a
+/// golden Lobster; `None` for another card or a Lobster without numbers.
+pub fn lobster_shown(card_id: &str, counters: [i32; 2]) -> Option<(i32, i32)> {
+    let (_, times) = LOBSTERS.iter().find(|(id, _)| *id == card_id)?;
+    let shown = (counters[0] / times, counters[1] / times);
+    (shown.0 > 0 && shown.1 > 0).then_some(shown)
+}
+
+/// The Deities by database id (T-671): C'Thun and Y'Shaarj.
+pub const DEITIES: [(i32, &str); 2] = [(130_610, "BGFYM_000"), (132_532, "BGFYM_011")];
+
+/// The Deity card a database id names, if it is one.
+pub fn deity_card(dbf: i32) -> Option<&'static str> {
+    DEITIES.iter().find(|(d, _)| *d == dbf).map(|(_, id)| *id)
+}
+
+/// Whether a card is a Deity (never counted among the Aberrations that
+/// awaken one).
+pub fn is_deity(id: &str) -> bool {
+    matches!(
+        id,
+        "BGFYM_000" | "BGFYM_000_G" | "BGFYM_011" | "BGFYM_011_G"
+    )
+}
+
 pub fn token(id: &str) -> Option<&'static Token> {
     TOKENS
         .iter()
@@ -429,6 +528,9 @@ pub(crate) const fn gold(t: Token) -> Token {
 }
 
 pub const TOKENS: &[Token] = &[
+    // The Deities, awakened in combat with their own stats (T-671).
+    tok("BGFYM_000", 1, 1, Tribes::ABERRATION, 1),
+    tok("BGFYM_011", 1, 1, Tribes::ABERRATION, 1),
     tok("BG_BOT_312t", 1, 1, Tribes::MECH, 1),
     gold(tok("TB_BaconUps_032t", 2, 2, Tribes::MECH, 1)),
     tok("BG_ICC_026t", 1, 1, Tribes::UNDEAD, 1),

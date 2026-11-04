@@ -53,9 +53,9 @@ export const ES: Record<AccountKey, string> = {
   "account.public.hint":
     "Desactivado por defecto. Si lo activas, cualquiera puede encontrar tu perfil y ver tu nombre visible y todas las partidas que has subido, con todo detalle, y puedes aparecer en las clasificaciones públicas. Si lo desactivas, dejas de aparecer en todas partes en cuanto guardes.",
   "account.public.more.before":
-    "Es decir, de cada partida: héroe, puesto, modo, fecha, tribus ofrecidas y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
+    "Es decir, de cada partida: héroe, puesto, modo, fecha, tipos de esbirro ofrecidos y los tableros que viste. Con un nombre visible y una partida terminada, también apareces en las",
   "account.public.more.link": "clasificaciones públicas",
-  "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores.",
+  "account.public.more.after": ". Nunca tu puntuación ni los nombres de otros jugadores. Las clasificaciones se recalculan cada 10 minutos: un perfil, nombre o partida nuevos pueden tardar hasta 10 minutos en aparecer allí, mientras que al desactivar el perfil dejas de aparecer al instante.",
   "account.save": "Guardar",
   "account.publicPage": "Tu página pública:",
   "account.data": "Tus datos",
@@ -77,6 +77,17 @@ export const ES: Record<AccountKey, string> = {
   "account.simulator.more":
     "Los resultados son siempre totales de muchas partidas: nunca se publican por jugador ni con tu nombre. Si lo desactivas, desde ese momento tus partidas no se vuelven a usar, y los totales ya calculados con ellas no permiten llegar hasta ti.",
   "account.simulator.how": "Cómo funciona",
+  "account.training": "Modelo de puesto esperado",
+  "account.training.label": "Usar mis partidas subidas para entrenar el modelo de puesto esperado",
+  "account.training.hint":
+    "Activado salvo que lo desactives. Los registros completos de tus partidas subidas (mientras se conserven sus archivos) se pueden usar para entrenar el modelo que muestra, en cada turno de tus partidas, el puesto hacia el que iba. Puedes desactivarlo cuando quieras, sin dar motivos.",
+  "account.training.more":
+    "El modelo se entrena en el ordenador del responsable del proyecto, y las copias usadas se borran el mismo día. Solo se conservan el modelo y totales de todas las partidas usadas, nunca nada sobre ti ni sobre una partida concreta. Si lo desactivas, tus partidas quedan fuera de todos los entrenamientos posteriores, y seguirás viendo el puesto esperado en tus partidas.",
+  "account.training.how": "Cómo funciona",
+  "account.training.notice":
+    "Novedad: las partidas que subes ahora se pueden usar para entrenar el modelo de puesto esperado. Está activado en todas las cuentas, y solo se conservan el modelo y totales de todas las partidas. Si no quieres que se usen tus partidas, desactívalo cuando quieras:",
+  "account.training.notice.link": "el interruptor del entrenamiento",
+  "account.training.notice.dismiss": "Entendido",
   "account.delete": "Borrar cuenta",
   "account.delete.body":
     "Esto borra tu cuenta, tu perfil, todas las partidas y archivos subidos y tu historial de inicios de sesión. No se puede deshacer. Descarga antes tus datos si quieres conservarlos.",
@@ -97,6 +108,9 @@ export const ES: Record<AccountKey, string> = {
   "account.simulator.savedOn": "Guardado. Tus partidas ya se pueden usar para mejorar el simulador.",
   "account.simulator.savedOff": "Guardado. Tus partidas ya no se usan para el simulador.",
   "account.simulator.unchanged": "{error} Tu ajuste no ha cambiado.",
+  "account.training.savedOn": "Guardado. Tus partidas se pueden usar en los próximos entrenamientos.",
+  "account.training.savedOff": "Guardado. Tus partidas quedan fuera de todos los entrenamientos posteriores.",
+  "account.training.unchanged": "{error} Tu ajuste no ha cambiado.",
   "account.export.preparing": "Preparando tu archivo…",
   "account.export.done": "Descargado.",
   "account.export.failed": "La exportación ha fallado. Vuelve a intentarlo en un momento.",
@@ -162,7 +176,7 @@ export const ES: Record<AccountKey, string> = {
   "link.expired":
     "Este enlace ha caducado o ya se ha usado (cada correo nuevo sustituye al enlace anterior). Si estabas confirmando tu correo electrónico, prueba a iniciar sesión: puede que ya esté confirmado. Si no, pide un enlace nuevo.",
   "link.otherBrowser":
-    "Has abierto este enlace en un navegador distinto del que usaste para pedirlo. Si estabas confirmando tu correo electrónico, ya está confirmado: inicia sesión. Si estabas cambiando tu contraseña, abre el enlace en el navegador donde lo pediste o pide uno nuevo.",
+    "Este enlace no se puede completar aquí: lo has abierto en un navegador distinto del que usaste para pedirlo, o antes abriste un enlace de un correo anterior, que lo ha gastado. Si estabas confirmando tu correo electrónico, ya está confirmado: inicia sesión. Si estabas cambiando tu contraseña, abre el enlace del correo más reciente en el navegador donde lo pediste o pide uno nuevo.",
   "link.unreachable": "No se ha podido conectar con el servidor. Comprueba tu conexión y recarga la página.",
   "link.failed": "Este enlace no ha funcionado. Inicia sesión o pide un enlace nuevo.",
 

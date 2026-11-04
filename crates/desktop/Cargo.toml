@@ -1,6 +1,6 @@
 [package]
 name = "desktop"
-version = "0.2.5"
+version = "0.2.7"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -13,7 +13,7 @@ tauri-build = { version = "2", features = [] }
 [features]
 # The Microsoft Store edition (D-158, T-379): no self-update, the Store's
 # start-up task in place of the Run key. Read in src/edition.rs only.
-store = ["dep:windows"]
+store = []
 # The Store edition without the `unvirtualizedResources` capability: no Fix
 # button, the setup box lists the lines to write by hand (src/edition.rs).
 store-manual-setup = ["store"]
@@ -21,9 +21,12 @@ store-manual-setup = ["store"]
 [dependencies]
 tauri = { version = "2.12", features = ["tray-icon"] }
 tauri-plugin-autostart = "=2.7.0"
+# The one key that hides and shows the whole overlay (T-614): registered from
+# Rust only while the app runs; no JavaScript access. Pinned.
+tauri-plugin-global-shortcut = "=2.4.1"
 # Self-update from the project's signed GitHub releases (T-105b). Windows'
 # own TLS like the uploader; no zip (only for Tauri v1 update bundles).
-tauri-plugin-updater = { version = "=2.13.1", default-features = false, features = ["native-tls", "system-proxy"] }
+tauri-plugin-updater = { version = "=2.14.0", default-features = false, features = ["native-tls", "system-proxy"] }
 # The verifier the plugin uses; here only to tell a real public key from the
 # placeholder before the plugin is turned on.
 minisign-verify = "0.3"
@@ -52,13 +55,15 @@ minisign = "=0.10.0"
 [target.'cfg(windows)'.dependencies]
 # Already in the build through auto-launch; quotes the start-up entry.
 winreg = "0.56"
-# The Store edition's start-up task (WinRT `StartupTask`) and its check for
-# package identity. Already in the lock through Tauri's WebView2 binding.
-windows = { version = "0.62", optional = true, default-features = false, features = [
+# The WebView2 check's message box (both editions), the Store edition's
+# start-up task (WinRT `StartupTask`) and its check for package identity.
+# Already in the lock through Tauri's WebView2 binding.
+windows = { version = "0.62", default-features = false, features = [
   "ApplicationModel",
   "ApplicationModel_Activation",
   "Foundation",
   "Win32_Foundation",
+  "Win32_Storage_FileSystem",
   "Win32_Storage_Packaging_Appx",
   "Win32_System_WinRT",
   "Win32_UI_WindowsAndMessaging",

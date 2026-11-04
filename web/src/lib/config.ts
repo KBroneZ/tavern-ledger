@@ -171,10 +171,16 @@ export function signupsOpen(env: ConfigSource): boolean {
  *
  * `turnstile` is for TURNSTILE_PAGES only (T-562): script-src and frame-src
  * get Cloudflare's challenge origin, for the widget's script and its frame.
+ *
+ * `serviceWorker` is for /sw.js only (T-637): the worker fetches the site's
+ * own files to keep a copy, so its connect-src is 'self' in place of
+ * Supabase, which it never talks to. `worker-src 'self'` lets the pages
+ * register it (only with accounts open, the only build with scripts) and
+ * `manifest-src 'self'` lets them link the web app manifest.
  */
 export function contentSecurityPolicy(
   supabaseOrigin: string | null,
-  options: { wasm?: boolean; turnstile?: boolean } = {},
+  options: { wasm?: boolean; turnstile?: boolean; serviceWorker?: boolean } = {},
 ): string {
   // Accounts closed: no page has a script or a form, so allow none at all.
   const open = supabaseOrigin !== null;
@@ -188,8 +194,10 @@ export function contentSecurityPolicy(
     "style-src 'self'",
     `img-src ${open ? `'self' ${ART_ORIGIN} ${TEXTURE_ORIGIN}` : "'self'"}`,
     "font-src 'self'",
-    `connect-src ${supabaseOrigin ?? "'none'"}`,
+    `connect-src ${open && options.serviceWorker === true ? "'self'" : (supabaseOrigin ?? "'none'")}`,
     ...(captcha ? [`frame-src ${TURNSTILE_ORIGIN}`] : []),
+    ...(open ? ["worker-src 'self'"] : []),
+    "manifest-src 'self'",
     "base-uri 'none'",
     `form-action ${open ? "'self'" : "'none'"}`,
   ].join("; ");

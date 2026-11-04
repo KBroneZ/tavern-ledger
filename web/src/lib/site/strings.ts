@@ -17,6 +17,7 @@ export const SITE_STRINGS = {
   "layout.privacy": "Privacy",
   "layout.terms": "Terms",
   "layout.accuracy": "Simulator accuracy",
+  "layout.press": "Press kit",
   "layout.leaderboards": "Leaderboards",
   "layout.heroes": "Hero stats",
   "layout.games": "Your games",
@@ -33,11 +34,24 @@ export const SITE_STRINGS = {
   // Alt text of the link preview image (public/social-card.png, T-523).
   "layout.socialAlt": "Tavern Ledger logo, a tankard drawn from the letters TL, over the line Hearthstone Battlegrounds tracker",
 
+  // Installable web app (T-637): the home-screen hint in the footer, the manifest's description, the offline page.
+  "layout.install": "Add to home screen",
+  "layout.installIos": "To add this site to your home screen, tap Share, then “Add to Home Screen”.",
+  "pwa.description": "Your Hearthstone Battlegrounds games: stats, replays and a combat simulator.",
+  "offline.title": "You are offline",
+  "offline.description": "There is no connection, and this page is not saved on your device.",
+  "offline.lead": "There is no connection, and this page is not saved on your device. Pages you opened before still work; your games need a connection unless you saved them on this device.",
+  "offline.saved.title": "Saved on this device",
+  "offline.saved.lead": "These games open without a connection.",
+  "offline.saved.fallback": "Saved game",
+  "offline.retry": "Try again",
+  "offline.back": "Go to the home page",
+
   // Page titles and descriptions.
-  "meta.index.title": "Your Battlegrounds games, kept for you",
+  "meta.index.title": "Free Hearthstone Battlegrounds tracker for Windows",
   "meta.index.description":
     "Free, open-source Battlegrounds tracker for Windows that reads the game's log files, plus a website to follow your progress.",
-  "meta.download.title": "Download for Windows",
+  "meta.download.title": "Download the free Battlegrounds tracker for Windows",
   "meta.download.description":
     "Download the Tavern Ledger beta for Windows 10 and 11: a free app that keeps your Hearthstone Battlegrounds games. Four small steps to install it.",
   "meta.privacy.title": "Privacy",
@@ -63,6 +77,9 @@ export const SITE_STRINGS = {
   "meta.accuracy.title": "Simulator accuracy",
   "meta.accuracy.description":
     "How often Tavern Ledger's combat odds are right, measured on real Battlegrounds combats, per mode, with the share of combats that got no odds shown beside every number.",
+  "meta.calibration.title": "Expected place calibration",
+  "meta.calibration.description":
+    "How close Tavern Ledger's expected place comes, checked on Battlegrounds games the model never saw, per mode and game version, with the games behind every number. No model is published yet.",
   "meta.signin.title": "Sign in",
   "meta.signin.description": "Sign in or create a Tavern Ledger account.",
   "meta.account.title": "Your account",
@@ -154,6 +171,12 @@ export const SITE_STRINGS = {
   "news.heroes.link": "Hero stats",
   "news.simulator": "A combat simulator on the website: load a board from one of your games, change it and run it.",
   "news.simulator.link": "Simulator",
+  "news.app027": "App version 0.2.7: a simpler overlay (tribes on top of the opponents, counters under them, Ctrl+Shift+H to hide it, a preview from the tray) and a Today and this week summary in the main window.",
+  "news.app027.link": "Download",
+  "news.app026": "App version 0.2.6: fewer combats without odds (the simulator knows every hero power and trinket), a Copy diagnostics button, and an uninstall box that deletes your games only if you tick it.",
+  "news.app026.link": "Download",
+  "news.accuracykits": "The accuracy page now plays each saved board with its hero powers and trinkets.",
+  "news.accuracykits.link": "Simulator accuracy",
   "news.app025": "App version 0.2.5: the combat odds play start of combat, hero powers and trinkets, and the overlay shows an early estimate as each combat starts.",
   "news.app025.link": "Download",
   "news.simkits": "The website simulator takes each board's hero power and trinkets, and plays start of combat on boards you build.",

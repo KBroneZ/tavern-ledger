@@ -31,7 +31,16 @@
   // The tooltip that says where the time comes from.
   const tip = (game) => I18n.t(own(game) ? "win.recap.subTipGame" : "win.recap.subTip");
 
-  const api = { when, length, tip };
+  // What the recap keeps of the game it was opened from: the game's key and
+  // its own times, so the recap's date, length and tooltip are its row's.
+  const target = (game) => ({
+    session: game.session,
+    index: game.index,
+    started: Number.isInteger(game.started) ? game.started : null,
+    ended: Number.isInteger(game.ended) ? game.ended : null,
+  });
+
+  const api = { when, length, tip, target };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLGameTime = api;
 })();

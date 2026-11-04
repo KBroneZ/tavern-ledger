@@ -31,7 +31,7 @@ test("each cause gets one plain line and its evidence, in English and Spanish", 
     combat({ odds: null, no_odds: "no_card_data", cards: ["BG_PLAIN"], cause: null }),
   ]);
   I18n.setLang("en");
-  assert.equal(TLWhy.causeLine(chance, nameOf), "Chance: the replay matched until the dice.");
+  assert.equal(TLWhy.causeLine(chance, nameOf), "Dice luck: the replay matched the game until the dice rolled.");
   assert.equal(TLWhy.causeLine(missing, nameOf), "Not seen: Blood Gem upgrades.", "each kind once");
   assert.equal(TLWhy.causeLine(approx, nameOf), "Approximate: Plain Card.");
   assert.equal(TLWhy.causeLine(rule, nameOf), "Rule differs at attack 4: Plain Card.");

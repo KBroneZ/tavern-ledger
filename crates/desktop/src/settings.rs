@@ -88,6 +88,10 @@ pub struct TrayItems {
     pub overlay: CheckMenuItem<Wry>,
     pub unlock: CheckMenuItem<Wry>,
     pub reset_layout: MenuItem<Wry>,
+    /// Hide and show everything the overlay draws (T-614).
+    pub hide_all: CheckMenuItem<Wry>,
+    /// The preview with example data (T-614).
+    pub preview: CheckMenuItem<Wry>,
     pub autostart: CheckMenuItem<Wry>,
     pub autostart_available: bool,
     pub quit: MenuItem<Wry>,
@@ -227,6 +231,8 @@ impl Settings {
             let _ = items.overlay.set_text(words.overlay);
             let _ = items.unlock.set_text(words.unlock);
             let _ = items.reset_layout.set_text(words.reset_layout);
+            let _ = items.hide_all.set_text(words.hide_all);
+            let _ = items.preview.set_text(words.preview);
             let _ = items.autostart.set_text(if items.autostart_available {
                 words.autostart
             } else {
@@ -276,6 +282,8 @@ pub struct TrayWords {
     pub overlay: &'static str,
     pub unlock: &'static str,
     pub reset_layout: &'static str,
+    pub hide_all: &'static str,
+    pub preview: &'static str,
     pub autostart: &'static str,
     pub autostart_unavailable: &'static str,
     pub quit: &'static str,
@@ -289,6 +297,8 @@ pub fn tray_words(language: Language) -> TrayWords {
             overlay: "Show overlay during a game",
             unlock: "Unlock overlay to move and resize panels",
             reset_layout: "Reset overlay layout",
+            hide_all: "Hide overlay (Ctrl+Shift+H)",
+            preview: "Preview overlay with example data",
             autostart: "Start with Windows",
             autostart_unavailable: "Start with Windows (not available in this copy of the app)",
             quit: "Quit",
@@ -299,6 +309,8 @@ pub fn tray_words(language: Language) -> TrayWords {
             overlay: "Mostrar overlay durante la partida",
             unlock: "Desbloquear el overlay para mover y redimensionar paneles",
             reset_layout: "Restablecer la disposición del overlay",
+            hide_all: "Ocultar overlay (Ctrl+Mayús+H)",
+            preview: "Vista previa del overlay con datos de ejemplo",
             autostart: "Iniciar con Windows",
             autostart_unavailable: "Iniciar con Windows (no disponible en esta copia de la app)",
             quit: "Salir",

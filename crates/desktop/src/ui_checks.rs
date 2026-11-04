@@ -107,7 +107,7 @@ fn the_arrange_button_has_one_signal_not_two() {
 
 #[test]
 fn the_overlay_can_be_arranged_by_keyboard() {
-    for panel in ["status", "tribes", "opponents", "legend"] {
+    for panel in ["status", "opponents", "counters", "odds"] {
         assert!(OVERLAY.contains(&format!("data-focus=\"slot:{panel}\"")));
     }
     assert!(OVERLAY.contains("id=\"key-hint\""), "the hint for the keys");

@@ -6,6 +6,7 @@ import { ES } from "./strings.es.ts";
 
 export const SIM_STRINGS = {
   "page.title": "Combat simulator",
+  "meta.title": "Battlegrounds combat simulator",
   "page.description": "Try a Battlegrounds combat: load a round from one of your games or build the boards, then see the odds.",
   "page.kicker": "Try a combat",
   "page.lead": "Pick one of your games, pick a fight and see the odds. Or put the minions on both sides yourself.",
@@ -49,6 +50,7 @@ export const SIM_STRINGS = {
   "board.addSecond": "Add a second board",
   "board.remove": "Remove this board",
   "board.full": "A board holds 7 minions.",
+  "board.leftOut": "This board has no minions, so it is left out: its hero power and trinkets are not played. Add a minion to use them.",
 
   "tier.label": "Tavern tier",
   "tier.unknown": "?",

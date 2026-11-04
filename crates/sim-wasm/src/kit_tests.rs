@@ -53,6 +53,30 @@ fn a_start_of_combat_hero_power_plays_only_when_start_of_combat_does() {
     // Boards taken at the first attack already carry it.
     let a = run(&request(powers, false));
     assert_eq!(share(&a, "lost"), 1.0);
+    assert_eq!(
+        a["start_of_combat"], true,
+        "its start of combat is on the boards, so the odds are marked (T-632)"
+    );
+}
+
+/// Holy Mallet acts at the start of combat; Bleeding Heart has no effect in
+/// combat; Bronzebeard Portrait acts later in it.
+const MALLET: &str = "BG30_MagicItem_902";
+const NO_EFFECT: &str = "BG30_MagicItem_713";
+const LATER: &str = "BG30_MagicItem_418";
+
+#[test]
+fn the_mark_is_set_for_a_trinket_that_acts_at_the_start_of_combat_only() {
+    let mark = |id: &str, soc: bool| {
+        let mut req = request(json!([]), soc);
+        req["player"][0]["kit"]["trinkets"] = json!([{ "card_id": id, "slot": 1 }]);
+        run(&req)["start_of_combat"].clone()
+    };
+    assert_eq!(mark(MALLET, false), true);
+    assert_eq!(mark(MALLET, true), false, "played, not missed");
+    assert_eq!(mark(NO_EFFECT, false), false);
+    assert_eq!(mark(LATER, false), false);
+    assert_eq!(run(&request(json!([]), false))["start_of_combat"], false);
 }
 
 #[test]

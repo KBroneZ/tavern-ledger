@@ -19,6 +19,7 @@ const modeName = (id) => (MODES[id] ? tl(`mode.${id}`) : null);
 let allGames = [];
 let stats = { modes: [], legend: [] };
 let curious = null; // the "Curious stats" tab (T-216), all modes together
+let period = null; // "Today and this week" (T-361): the app's answer and the ranges it was asked for
 let mode = null; // chosen game type; defaults to the mode with most games
 let userPicked = false;
 const OTHER = "OTHER"; // any other Battlegrounds type, so no game is hidden
@@ -36,7 +37,8 @@ function el(tag, className, text) {
 
 // Where a value comes from (T-109). The app decides the source (tracker::provenance)
 // and this file only shows it: a mark for every source but the log, and a tooltip on every value.
-const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown"];
+// "nogames" is not the log's word: the window says it for a mode with no game (tally-words.js).
+const SOURCES = ["log", "inferred", "entered", "leaderboard", "card_data", "possible", "game", "unknown", "nogames"];
 const sourceOf = (source) => (SOURCES.includes(source) ? source : "unknown");
 
 // The words are the interface's own (source.<key>.label and .description),
@@ -121,14 +123,20 @@ const minionArt = () => window.TLMinions || null;
 // (T-304); none when there is no id.
 const portrait = (id) => art(id, "portrait");
 
-// Hero name in the app's language from the card data, else as the game's log
-// printed it (in the game's language), else the card id. Never a guessed name.
+// Hero name in the app's language from the card data, the same one the stats
+// use for the hero whatever skin was played (TLCards.heroName); else as the
+// game's log printed it (in the game's language), else the card id. Never a
+// guessed name. The skin played is in the tooltip.
 function heroCell(report, source) {
   const id = typeof report.hero === "string" ? report.hero : null;
   const names = report.card_names && typeof report.card_names === "object" ? report.card_names : {};
-  const name = id ? TLCards.display(id, typeof names[id] === "string" ? names[id] : null) : null;
+  const logName = id && typeof names[id] === "string" ? names[id] : null;
+  const name = id ? TLCards.heroName(id, logName) : null;
   const cell = el("td", "hero", name || "—");
-  if (name && name !== id) cell.title = id;
+  if (name && name !== id) {
+    const skin = TLCards.display(id, logName);
+    cell.title = skin && skin !== name && skin !== id ? `${skin} · ${id}` : id;
+  }
   const img = portrait(id);
   if (img) cell.prepend(img);
   return withSource(cell, source);
@@ -210,19 +218,23 @@ function topLabel(top) {
 function renderTally(m, devGames) {
   const t = m.totals;
   const src = m.totals_sources || {};
+  const marks = TLTallyWords.marks(t, src);
   const set = (id, value, source) => {
     const node = document.getElementById(id);
     node.textContent = value;
     node.title = "";
-    addTip(node, source);
-    const mark = sourceMark(source);
+    // "none": under a mode with no game only the games count carries the words.
+    if (source !== "none") addTip(node, source);
+    const mark = source === "none" ? null : sourceMark(source);
     document.getElementById(`${id}-src`).replaceChildren(...(mark ? [mark] : []));
   };
   document.getElementById("stat-top-label").textContent = topLabel(m.top_half);
-  set("stat-games", t.games || "—", src.games);
-  set("stat-avg", avgText(t.average_place), src.average_place);
-  set("stat-top", shareText(t.top_half_share), src.top_half_share);
-  set("stat-wins", dash(t.wins, String), src.wins);
+  set("stat-games", t.games || "—", marks.games);
+  set("stat-avg", avgText(t.average_place), marks.average_place);
+  set("stat-top", shareText(t.top_half_share), marks.top_half_share);
+  set("stat-wins", dash(t.wins, String), marks.wins);
+  // Not before the app has answered: an empty list then is not "no game yet".
+  document.getElementById("marks-hint").hidden = !(stats.modes.length > 0 && TLTallyWords.hintShown(allGames.length));
   const notCounted = (t.games || 0) - (t.placed || 0);
   const note = document.getElementById("not-counted");
   note.hidden = notCounted === 0 && devGames === 0;
@@ -238,12 +250,14 @@ function renderTally(m, devGames) {
 
 function heroRow(h, top) {
   const tr = el("tr");
-  const shown = h.hero ? TLCards.display(h.hero, h.name) : h.name;
+  const shown = h.hero ? TLCards.heroName(h.hero, h.name) : h.name;
   const cell = el("td", shown && shown !== h.hero ? "hero-name" : "hero", shown || tl("win.hero.unknown"));
   if (h.variants.length) cell.title = h.variants.join("\n");
   const img = portrait(h.hero);
   if (img) cell.prepend(img);
-  withSource(cell, h.name_source);
+  const fromData = Boolean(h.hero) && typeof TLCards.name(h.hero) === "string";
+  const nameMark = TLTallyWords.heroNameMark(h.name_source, fromData);
+  if (nameMark) withSource(cell, nameMark);
   withSource(cell, h.grouping);
   const t = h.tally;
   const src = h.tally_sources || {};
@@ -485,7 +499,7 @@ document.getElementById("tribes-form").addEventListener("submit", (e) => e.preve
 // The stats' long tables (T-323): top rows by games, ties broken by the better
 // average place and then the name, "Show all" for the rest (compact.js).
 function heroesTable(m) {
-  const name = (h) => (h.hero ? TLCards.display(h.hero, h.name) : h.name) || "";
+  const name = (h) => (h.hero ? TLCards.heroName(h.hero, h.name) : h.name) || "";
   const rows = TLCompact.rank(m.heroes, { games: (h) => h.tally.games, place: (h) => h.tally.average_place, name });
   const columns = [
     { label: tl("win.col.hero"), sort: name, text: true },
@@ -667,6 +681,103 @@ async function loadWhy(game, key) {
   const shown = document.getElementById("recap-why");
   if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(whySection(game)));
 }
+// The game review (T-658): started with its button, never by itself, as it
+// takes up to a minute; the app refuses while a game is on. The app keeps the
+// last answers and the review running, so a recap opened again (or a window
+// reloaded) asks it once and resumes; the answers seen here are kept too.
+const REVIEW_KEPT = 8;
+const reviewKept = new Map();
+const reviewRunning = new Set();
+const reviewAsked = new Set();
+// How far a running review is, from the app's "review-progress" events.
+const reviewProgress = new Map();
+
+function keepReview(key, answer) {
+  reviewKept.delete(key);
+  reviewKept.set(key, answer);
+  if (reviewKept.size > REVIEW_KEPT) reviewKept.delete(reviewKept.keys().next().value);
+}
+
+// The app's state for `key`: running (resume), an answer, or nothing yet.
+function takeReviewState(key, read) {
+  if (read && read.state === "reviewing") {
+    reviewRunning.add(key);
+    reviewProgress.set(key, read.progress);
+    return;
+  }
+  reviewRunning.delete(key);
+  reviewProgress.delete(key);
+  if (read && read.state !== "idle") keepReview(key, read);
+}
+
+async function loadReviewStatus(game, key) {
+  reviewAsked.add(key);
+  try {
+    takeReviewState(key, TLReviewWords.read(await invoke("game_review_status", { session: game.session, index: game.index })));
+  } catch {
+    return; // nothing to resume; the button is there
+  }
+  redrawReview(game, key);
+}
+
+function reviewSection(game) {
+  const key = gameKey(game);
+  if (!reviewAsked.has(key) && !reviewRunning.has(key) && !reviewKept.has(key)) loadReviewStatus(game, key);
+  const state = reviewRunning.has(key) ? "reviewing" : reviewKept.get(key) || "idle";
+  const saved = allGames.find((g) => gameKey(g) === key) || {};
+  const tools = { fold: TLCompact.fold, game: key, cardName: (id) => TLCards.display(id) || id, card: TLShop.card, report: saved.report || null, progress: reviewProgress.get(key) || null, onStart: () => startReview(game, key) };
+  const section = TLReview.section(SHOP_UI, state, tools);
+  section.id = "recap-review";
+  return section;
+}
+
+function redrawReview(game, key) {
+  const shown = document.getElementById("recap-review");
+  if (shown && recapGame && gameKey(recapGame) === key) TLFocus.keep(document, () => shown.replaceWith(reviewSection(game)));
+}
+
+// Only the "Reviewing…" line changes, so focus and folds are left alone.
+function onReviewProgress(p) {
+  if (!p || typeof p.session !== "string" || !Number.isInteger(p.index)) return;
+  const key = gameKey({ session: p.session, index: p.index });
+  if (!reviewRunning.has(key)) return;
+  reviewProgress.set(key, { done: p.done, total: p.total });
+  const line = document.querySelector("#recap-review .review-busy");
+  const text = TLReviewWords.progressLine(reviewProgress.get(key));
+  if (line && text && recapGame && gameKey(recapGame) === key) line.textContent = text;
+}
+
+// A review that ended, also one this window did not start (a reload):
+// its answer comes from the app.
+async function onReviewDone(p) {
+  if (!p || typeof p.session !== "string" || !Number.isInteger(p.index)) return;
+  const game = { session: p.session, index: p.index };
+  const key = gameKey(game);
+  if (!reviewRunning.has(key)) return;
+  try {
+    takeReviewState(key, TLReviewWords.read(await invoke("game_review_status", game)) || "failed");
+  } catch {
+    takeReviewState(key, "failed");
+  }
+  redrawReview(recapGame && gameKey(recapGame) === key ? recapGame : game, key);
+}
+
+async function startReview(game, key) {
+  if (reviewRunning.has(key)) return;
+  reviewRunning.add(key);
+  reviewKept.delete(key);
+  redrawReview(game, key);
+  let read;
+  try {
+    read = TLReviewWords.read(await invoke("game_review", { session: game.session, index: game.index })) || "failed";
+  } catch {
+    read = "failed";
+  }
+  // "reviewing": this game was already being reviewed; "review-done" ends it.
+  takeReviewState(key, read);
+  redrawReview(game, key);
+}
+
 const OUTCOMES = ["won", "lost", "tie", "unknown"];
 const outcomeWord = (outcome) => tl(`outcome.${OUTCOMES.includes(outcome) ? outcome : "unknown"}`);
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -680,7 +791,7 @@ function recapButton(game) {
   return button;
 }
 
-const heroText = (hero) => (hero && TLCards.display(hero.id, hero.name)) || "—";
+const heroText = (hero) => (hero && TLCards.heroName(hero.id, hero.name)) || "—";
 
 // The hero's name with its portrait in front, when there is one.
 function heroWithPortrait(hero) {
@@ -790,6 +901,45 @@ function healthChart(points) {
   flush();
   wrap.append(chart, TLCompact.about(SHOP_UI, "health-chart", tl("win.chart.help"), tl("win.chart.howTo")));
   return wrap;
+}
+
+// Expected place after each combat (T-654): the model's place as a line, 1 at
+// the top, over the middle half of the places it gives; the turn that cost
+// the most marked. Until a model ships it is one quiet line saying why.
+function placePart(curve, duos) {
+  const view = TLPlace.placeView(curve, duos);
+  if (!view) return [];
+  if (view.kind === "dash") return [el("p", "empty place-dash", view.text)];
+  const wrap = el("div", "chart");
+  const width = 480, height = 120, pad = 16, padTop = 10, padBottom = 26;
+  const last = Math.max(view.points.length - 1, 1);
+  const x = (i) => pad + (i * (width - 2 * pad)) / last;
+  const y = (place) => padTop + ((place - 1) * (height - padTop - padBottom)) / (view.last - 1);
+  const chart = svg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", class: "place-chart" });
+  chart.setAttribute("aria-label", view.said);
+  let run = [];
+  const flush = () => {
+    if (run.length > 1) chart.append(svg("polyline", { points: run.join(" "), class: "line" }));
+    run = [];
+  };
+  view.points.forEach((p, i) => {
+    const turn = svg("text", { x: x(i), y: height - 8, "text-anchor": "middle", class: "round-label" });
+    turn.textContent = p.turn;
+    chart.append(turn);
+    if (p.mean === null) return flush();
+    chart.append(svg("line", { x1: x(i), y1: y(p.low), x2: x(i), y2: y(p.high), class: "band" }));
+    run.push(`${x(i)},${y(p.mean)}`);
+    const dot = svg("circle", { cx: x(i), cy: y(p.mean), r: 3, class: "dot" });
+    const tip = svg("title", {});
+    tip.textContent = TLPlace.pointSaid(p);
+    dot.append(tip);
+    chart.append(dot);
+  });
+  flush();
+  wrap.append(chart);
+  if (view.worst) wrap.append(el("p", "place-worst", view.worst));
+  wrap.append(TLCompact.about(SHOP_UI, "place-chart", tl("win.place.help"), tl("win.chart.howTo")));
+  return [el("h3", null, tl("win.place.title")), wrap];
 }
 
 function combatChip(c) {
@@ -977,7 +1127,7 @@ function renderRecapNow(r, game) {
   renderRecapBar(r, game);
   updateTribesButton(game);
   const health = el("section", "recap-part");
-  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health));
+  health.append(withSource(el("h3", null, tl("win.recap.healthTitle")), r.health_source), healthChart(r.health), ...placePart(r.expected_place, r.is_duos));
   const top = el("div", "recap-top");
   top.append(recapFacts(r), health);
   if (TLUnreadable.isUnreadable(r.status.value)) {
@@ -990,7 +1140,7 @@ function renderRecapNow(r, game) {
   // (T-215), why each result differed (T-346), record and messages; the rest
   // waits for Advanced.
   document.getElementById("recap-body").replaceChildren(
-    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game),
+    top, TLShop.recapSummary(r.shop, SHOP_UI, r.is_duos, key), TLReplay.section(SHOP_UI, r, report, replayTools), whySection(game), reviewSection(game),
     advancedOnly(TLTurns.section(SHOP_UI, r, report, turnTools)),
     recordSection(r), advancedOnly(TLExtras.heroPickSection(r.hero_pick, SHOP_UI, portrait)),
     advancedOnly(TLRoundTwo.choicesSection(SHOP_UI, r.choices, key)),
@@ -1014,7 +1164,7 @@ const recapView = TLRecapView.create({
 
 // Loads (or reloads) the recap of `game`; opens the view if it is not open.
 async function openRecap(game) {
-  const target = { session: game.session, index: game.index };
+  const target = TLGameTime.target(game);
   const reload = recapView.isOpen() && recapGame && gameKey(recapGame) === gameKey(target);
   recapGame = target;
   if (!reload) {
@@ -1027,7 +1177,7 @@ async function openRecap(game) {
   showReportMessage("recap-error", "");
   recapView.open(`recap:${target.session}:${target.index}`);
   try {
-    const recap = await invoke("game_recap", target);
+    const recap = await invoke("game_recap", { session: target.session, index: target.index });
     if (recapGame === target) {
       recapShown = { recap, target };
       renderRecap(recap, target);
@@ -1082,6 +1232,87 @@ function renderNow() {
   if (recapGame) updateTribesButton(recapGame);
 }
 
+// "Today and this week" (T-361): the app sums the games of the viewer's local
+// day and week (from Monday); this only words them. A game worth revisiting
+// opens its recap, which has the replays.
+const periodSignedClass = (up) => (up === true ? "up" : up === false ? "down" : "");
+
+function periodRevisit(r) {
+  const button = el("button");
+  button.type = "button";
+  button.title = tl("period.revisit.open");
+  button.setAttribute("aria-label", `${r.said}. ${tl("period.revisit.open")}`);
+  button.append(el("span", "period-reason", r.label), document.createTextNode(` · ${heroText(r.hero)} · ${r.placeText}`));
+  if (r.change) button.append(document.createTextNode(" · "), el("span", `period-change ${periodSignedClass(r.up)}`.trim(), r.change));
+  button.addEventListener("click", () => {
+    const game = allGames.find((g) => g.session === r.session && g.index === r.index);
+    if (game) openRecap(game).catch(showError);
+  });
+  const item = el("li");
+  item.append(button);
+  return item;
+}
+
+function periodMode(row) {
+  const block = el("div", "period-mode");
+  block.append(el("h4", null, row.label), el("p", null, row.games), el("p", null, row.average), el("p", null, row.record));
+  block.append(el("p", `period-net ${row.net.state} ${periodSignedClass(row.net.up)}`.trim(), row.net.text));
+  if (row.revisit.length) {
+    const list = el("ul", "period-revisit");
+    list.setAttribute("aria-label", tl("period.revisit.title"));
+    list.append(...row.revisit.map(periodRevisit));
+    block.append(list);
+  }
+  return block;
+}
+
+function renderPeriod() {
+  if (!period) return;
+  const fill = (id, list, emptyKey) => {
+    const words = TLPeriod.period(list, heroText);
+    document.getElementById(id).replaceChildren(...(words.empty ? [el("p", "empty", tl(emptyKey))] : words.modes.map(periodMode)));
+  };
+  fill("period-today-body", period.view.today, "period.empty.today");
+  fill("period-week-body", period.view.week, "period.empty.week");
+  document.getElementById("period-note").textContent = TLPeriod.weekNote(period.range);
+}
+
+let periodSeq = 0;
+let periodTimer = null;
+
+// Asked again on every refresh and at the next local midnight, so a window left
+// open overnight changes its day (and its week on Monday).
+async function refreshPeriod() {
+  const seq = ++periodSeq;
+  const range = TLPeriod.ranges(new Date());
+  try {
+    const view = await invoke("period_overview", {
+      todayStart: range.todayStart, todayEnd: range.todayEnd, weekStart: range.weekStart, weekEnd: range.weekEnd,
+    });
+    if (seq !== periodSeq) return;
+    period = { view, range };
+    TLFocus.keep(document, renderPeriod);
+  } finally {
+    // Also after a failure, so the window still changes its day at midnight.
+    if (seq === periodSeq) {
+      clearTimeout(periodTimer);
+      periodTimer = setTimeout(() => refreshPeriod().catch(showError), Math.max(1000, range.todayEnd * 1000 - Date.now() + 1000));
+    }
+  }
+}
+
+// The rating a game moved is saved a little after the game ends (the app
+// reads it from the game), so the summary is asked again when the saved
+// rating changes. One ask at a time, a couple of seconds apart.
+let periodSoon = null;
+function refreshPeriodSoon() {
+  if (periodSoon) return;
+  periodSoon = setTimeout(() => {
+    periodSoon = null;
+    refreshPeriod().catch(showError);
+  }, 2000);
+}
+
 // Refreshes can overlap; only the latest one may paint, so an older answer
 // never replaces a newer one.
 let refreshSeq = 0;
@@ -1102,6 +1333,7 @@ async function refreshGames() {
   if (!userPicked) mode = pickDefaultMode();
   render();
   renderLobby();
+  refreshPeriod().catch(showError);
 }
 
 // "Your games", "Stats", "Curious stats" and Settings (T-216, T-323, T-324); all are
@@ -1182,6 +1414,9 @@ async function main() {
     if (recapGame) openRecap(recapGame).catch(showError);
   });
   await listen("game-finished", (e) => onGameFinished(e.payload).catch(showError));
+  await listen("review-progress", (e) => onReviewProgress(e.payload));
+  await listen("review-done", (e) => onReviewDone(e.payload).catch(showError));
+  await listen("live-changed", refreshPeriodSoon);
   await listen("status-changed", (e) => showStatus(e.payload));
   showStatus(await invoke("status"));
   await refreshGames();

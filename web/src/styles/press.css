@@ -1,0 +1,27 @@
+/* The press kit page (T-704): download.css's head and facts grid, plus the
+   lockup, the file lists and the quoted notice. */
+
+.press-lockup {
+  display: block;
+  width: min(100%, 22rem);
+  height: auto;
+  margin: 4px 0 14px;
+}
+
+.press-files {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.press-notice {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-inline-start: 3px solid var(--label);
+}
+
+.press-notice p {
+  margin: 0;
+}

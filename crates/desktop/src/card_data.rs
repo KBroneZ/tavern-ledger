@@ -225,6 +225,23 @@ pub fn card_names(
     names_of(english, local, &ids)
 }
 
+/// The hero each card id belongs to, as the stats group it (T-359): the
+/// card data's parent of a skin, else the D-019 rule. The recap names a hero
+/// by this id, so the same hero has one name in the recap and in the stats.
+/// Ids that are not plain card ids are left out.
+pub fn groups_of(links: &tracker::stats::HeroLinks, ids: &[String]) -> BTreeMap<String, String> {
+    ids.iter()
+        .filter(|id| valid_id(id))
+        .take(MAX_IDS)
+        .map(|id| (id.clone(), tracker::stats::hero_group(id, links)))
+        .collect()
+}
+
+#[tauri::command]
+pub fn hero_groups(cards: State<'_, Cards>, ids: Vec<String>) -> BTreeMap<String, String> {
+    groups_of(&hero_links(&cards), &ids)
+}
+
 #[tauri::command]
 pub fn card_data_status(cards: State<'_, Cards>) -> CardStatus {
     match cards.store.get() {
@@ -484,6 +501,34 @@ mod tests {
             names_of(None, None, &ids).is_empty(),
             "not known yet, not unknown"
         );
+    }
+
+    #[test]
+    fn heroes_are_grouped_by_the_stats_rule_and_only_card_ids_are_answered() {
+        let mut links = tracker::stats::HeroLinks::of_heroes([(59_999, "BG20_HERO_102".into())]);
+        links
+            .skin_parents
+            .insert("TB_BaconShop_HERO_102_SKIN_G".into(), 59_999);
+        let ids: Vec<String> = [
+            "TB_BaconShop_HERO_102_SKIN_G",
+            "BG21_HERO_000_SKIN_D",
+            "BG21_HERO_000",
+            "not a card id",
+        ]
+        .map(String::from)
+        .to_vec();
+        let groups = groups_of(&links, &ids);
+        assert_eq!(groups["TB_BaconShop_HERO_102_SKIN_G"], "BG20_HERO_102");
+        assert_eq!(groups["BG21_HERO_000_SKIN_D"], "BG21_HERO_000");
+        assert_eq!(groups["BG21_HERO_000"], "BG21_HERO_000");
+        assert!(!groups.contains_key("not a card id"));
+    }
+
+    #[test]
+    fn a_page_never_gets_more_groups_than_the_limit() {
+        let links = tracker::stats::HeroLinks::new();
+        let ids: Vec<String> = (0..MAX_IDS + 50).map(|i| format!("C_{i}")).collect();
+        assert_eq!(groups_of(&links, &ids).len(), MAX_IDS);
     }
 
     struct NoNetwork;

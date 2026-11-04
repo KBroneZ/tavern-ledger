@@ -4,7 +4,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { setLang } from "../../src/lib/i18n.ts";
-import { minionTip, tipHost, watchTipEscape } from "../../src/lib/game/minionTip.ts";
+import { minionTip, tipHost, tipShift, watchTipEscape, watchTipFit } from "../../src/lib/game/minionTip.ts";
+import { giftMarks } from "../../src/lib/game/gifts.ts";
 import { useCardNames } from "../../src/lib/game/names.ts";
 import { CardIndex } from "../../src/lib/sim/cards.ts";
 import type { VNode } from "../../src/lib/view/node.ts";
@@ -192,4 +193,88 @@ test("Escape hides the plaques until the pointer or the focus moves again", () =
   listeners.get("keydown")?.({ key: "Escape" });
   listeners.get("focusin")?.({});
   assert.equal(root.attrs.has("data-tips-off"), false, "so does the focus moving");
+});
+
+// ---------- a phone keeps the plaque on screen, and shows the gifts (T-551) ----------
+
+test("tipShift: a plaque inside the viewport stays; one past an edge moves back in, with a margin", () => {
+  assert.equal(tipShift({ left: 20, right: 200 }, 320), 0);
+  assert.equal(tipShift({ left: -37, right: 203 }, 320), 45, "past the left edge: move right to 8px");
+  assert.equal(tipShift({ left: 117, right: 357 }, 320), -45, "past the right edge: move left to 8px");
+  assert.equal(tipShift({ left: 8, right: 312 }, 320), 0, "exactly at the margins is inside");
+});
+
+test("tipShift: a plaque wider than the viewport lines up with the left margin", () => {
+  assert.equal(tipShift({ left: -10, right: 330 }, 320), 18);
+});
+
+function fitDoc(vw: number) {
+  const listeners = new Map<string, (e: { target: unknown }) => void>();
+  const doc = { documentElement: { clientWidth: vw }, addEventListener: (type: string, fn: (e: { target: unknown }) => void) => listeners.set(type, fn) };
+  return { doc, fire: (type: string, target: unknown) => listeners.get(type)?.({ target }) };
+}
+
+function fakeHost(rect: { left: number; right: number }) {
+  const style = new Map<string, string>();
+  const tip = {
+    style: { setProperty: (k: string, v: string) => style.set(k, v) },
+    // The plaque is measured as if not shifted (the property is reset first), then moved by the shift.
+    getBoundingClientRect: () => ({ ...rect, width: rect.right - rect.left, left: rect.left + parseFloat(style.get("--tip-dx") ?? "0"), right: rect.right + parseFloat(style.get("--tip-dx") ?? "0") }),
+  };
+  return { style, host: { querySelector: () => tip } };
+}
+
+test("watchTipFit: hovering or focusing a minion moves its plaque back onto the screen", () => {
+  const { doc, fire } = fitDoc(320);
+  watchTipFit(doc as never);
+  const a = fakeHost({ left: -37, right: 203 });
+  const target = { closest: () => a.host };
+  fire("pointerover", target);
+  assert.equal(a.style.get("--tip-dx"), "45px");
+  const b = fakeHost({ left: 117, right: 357 });
+  fire("focusin", { closest: () => b.host });
+  assert.equal(b.style.get("--tip-dx"), "-45px");
+  const c = fakeHost({ left: 40, right: 280 });
+  fire("pointerover", { closest: () => c.host });
+  assert.equal(c.style.get("--tip-dx"), "0px");
+});
+
+test("watchTipFit: anything that is not a minion with a plaque does nothing", () => {
+  const { doc, fire } = fitDoc(320);
+  watchTipFit(doc as never);
+  const calls: string[] = [];
+  const spy = { style: { setProperty: (k: string) => calls.push(k) }, getBoundingClientRect: () => ({ left: 0, right: 0, width: 0 }) };
+  fire("pointerover", { closest: () => null });
+  fire("pointerover", {});
+  fire("focusin", null);
+  fire("pointerover", { closest: () => ({ querySelector: () => null }) });
+  assert.deepEqual(calls, [], "no plaque, nothing set");
+  // A plaque with no size (display: none, not laid out yet) says nothing about where it will sit.
+  fire("pointerover", { closest: () => ({ querySelector: () => spy }) });
+  assert.equal(calls.at(-1), "--tip-dx");
+  assert.deepEqual(calls, ["--tip-dx"], "only the reset: no shift is worked out from a 0-size rect");
+});
+
+test("a minion's Dark Gifts are in its plaque too, for a screen that cannot hover (names and summaries as the star's tooltip)", () => {
+  setLang("en");
+  names();
+  const marks = giftMarks({ gifts: ["SYN_GIFT_X"], giftUnknown: false });
+  const tip = minionTip("tip-g", { ...BIG, buffs: [], gifts: marks });
+  const gifts = [...walk(tip)].filter((n) => (attr(n, "class") ?? "") === "tip-gift");
+  assert.equal(gifts.length, 1);
+  assert.equal(text(gifts[0]), marks[0].title);
+  const none = minionTip("tip-h", { ...BIG, buffs: [] });
+  assert.equal([...walk(none)].some((n) => (attr(n, "class") ?? "") === "tip-gift"), false, "no gifts, no lines");
+  const unknown = giftMarks({ gifts: [], giftUnknown: true });
+  assert.match(text([...walk(minionTip("tip-i", { ...BIG, buffs: [], gifts: unknown }))].find((n) => (attr(n, "class") ?? "") === "tip-gift") as VNode), /unknown/i);
+});
+
+test("a replay tile and a board's minion hand their gifts to the plaque", () => {
+  setLang("en");
+  names();
+  const tile: Tile = { ref: 4, cardId: "BG20_100", atk: 2, health: 2, golden: false, shield: false, keywords: [], gifts: ["SYN_GIFT_X"], giftUnknown: false, buffs: [], marks: {} };
+  const li = tileView(tile);
+  assert.equal([...walk(li)].filter((n) => (attr(n, "class") ?? "") === "tip-gift").length, 1);
+  const board = boardBlock("gv-b2", "Your board", null, { minions: [minion({ gifts: ["SYN_GIFT_X"] })], attack: 2, health: 2 });
+  assert.equal([...walk(board)].filter((n) => (attr(n, "class") ?? "") === "tip-gift").length, 1);
 });

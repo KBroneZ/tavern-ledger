@@ -190,7 +190,7 @@ function notes(view: GameView): VNode[] {
     more(
       { context: g("turns.col.odds") },
       h("p", {}, g("why.desc")),
-      h("p", {}, h("a", { href: `${href("/accuracy/")}#acc-causes` }, g("why.link"))),
+      h("p", { class: "gv-link" }, h("a", { href: `${href("/accuracy/")}#acc-causes` }, g("why.link"))),
     ),
   ].filter((n): n is VNode => n !== null);
 }
@@ -210,6 +210,9 @@ export function turnsSection(view: GameView): VNode {
     attrs,
     heading,
     chartTurns.length > 0 ? turnChart(chartTurns, "gv-chart") : null,
+    // Expected place per combat (T-654): no trained model ships yet, so every
+    // turn would be a dash; one quiet line says why instead of an empty chart.
+    chartTurns.length > 0 ? h("p", { class: "data-note gv-place-dash" }, g("turns.place.dash")) : null,
     turnsTable(view),
     ...notes(view),
   );

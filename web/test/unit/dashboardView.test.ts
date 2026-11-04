@@ -96,12 +96,23 @@ test("games list: one mode leaves the mode column out; one page needs no pager",
 });
 
 test("games list: no match, a page past the end and filters left out each say so", () => {
-  assert.match(listBody(listPage({ rows: [], total: 0 })).map(textOf).join(" "), /No games match these filters/);
+  assert.match(listBody(listPage({ rows: [], total: 0, filters: { ...DEFAULT_FILTERS, mode: "solo" } })).map(textOf).join(" "), /No games match these filters/);
   const past = listBody(listPage({ rows: [], total: 30, filters: { ...DEFAULT_FILTERS, page: 9 } })).map(toHtml).join("");
   assert.match(past, /No games on this page/);
   assert.ok(past.includes(`href="/games/?id=${ID}"`));
   const bad = listBody(listPage({ invalid: ["hero", "from", "from"] })).map(textOf).join(" ");
   assert.match(bad, /were ignored: hero, from\./);
+});
+
+test("games list: no games at all says \"No games yet\", with the download page on the owner's list only", () => {
+  const own = listBody(listPage({ rows: [], total: 0, profileId: null })).map(toHtml).join("");
+  assert.match(own, /No games yet/);
+  assert.doesNotMatch(own, /No games match/);
+  assert.ok(own.includes('href="/download/"'), "the owner is pointed to the download page");
+  const pub = listBody(listPage({ rows: [], total: 0 })).map(toHtml).join("");
+  assert.match(pub, /No games yet/);
+  assert.match(pub, /This player has not uploaded any games/);
+  assert.doesNotMatch(pub, /download/);
 });
 
 test("games list: one game on the page reads as one game", () => {

@@ -15,16 +15,28 @@ let game = null;
 // Where the game client is (T-314, LoadingScreen.log): "battlegrounds_loading"
 // shows the overlay with the loading screen, before the log has the game.
 let scene = null;
+// Another program holds the hide key (T-614): said in the status box during a game.
+let keyTaken = false;
 // While the layout is being edited and no game is on, the panels show the
 // example game so there is something to arrange (overlay-example.js).
 let editing = false;
+// The preview from the tray (T-614): the example game over the desktop, with
+// no game on. The app closes it when a game starts.
+let previewing = false;
 // The lobby panel's values (T-338, overlay_lobby): shown on the
 // Battlegrounds lobby screen with no game on.
 let lobbyView = null;
 const LOBBY_REFRESH_MS = 5000;
 
+// The example game fills the panels while arranging and in the preview. The
+// hero select and lobby examples are for arranging only: the preview shows the
+// overlay as it looks during a game.
+function showsExample() {
+  return editing || previewing;
+}
+
 function current() {
-  return game || (editing ? EXAMPLE_GAME : null);
+  return game || (showsExample() ? EXAMPLE_GAME : null);
 }
 
 function setEditing(on) {
@@ -94,8 +106,9 @@ function renderStatus(g) {
   // Nothing of the heroes, mode, combat or health in words during a game
   // (T-339): the game shows all of it already.
   if (g.phase === "over") panel.append(el("div", null, TLI18n.t("ov.status.over")));
-  if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t("ov.status.example")));
+  if (g === EXAMPLE_GAME) panel.append(el("p", "notes", TLI18n.t(previewing && !editing ? "ov.status.preview" : "ov.status.example")));
   const notes = [...g.warnings, ...g.problems].slice(0, 2).map((w) => TLI18n.backend(w));
+  if (keyTaken && g !== EXAMPLE_GAME) notes.push(TLI18n.t("ov.status.keyTaken"));
   if (notes.length) panel.append(el("p", "notes", notes.join(" · ")));
   // Warnings and problems always show: a failure is never silent.
   panel.classList.toggle("empty", g.phase !== "over" && g !== EXAMPLE_GAME && !notes.length);
@@ -107,6 +120,8 @@ function tribeRow(g) {
   const panel = TLWords.tribesPanel(g);
   if (!panel.tribes.length) return el("p", "tribe-reason", panel.reason);
   const row = el("div", "tribe-chips");
+  // A named group, so screen readers say "Tribes" before the chips.
+  row.setAttribute("role", "group");
   row.setAttribute("aria-label", TLI18n.t("ov.slot.tribes"));
   for (const t of panel.tribes) {
     // The short name is seen, the full one read out.
@@ -125,14 +140,6 @@ function tribeShort(id) {
   return key in TLI18n.tables().en ? TLI18n.t(key) : tribeName(id);
 }
 
-function renderTribes(g) {
-  const panel = document.getElementById("tribes");
-  const row = tribeRow(g);
-  panel.replaceChildren(row);
-  panel.classList.remove("empty");
-  panel.hidden = false;
-}
-
 // The counters panel (T-612): the player's own running totals, one line each
 // Hidden when there is nothing to show: null (unknown) and [] (nothing applies) both leave no empty box.
 function renderCounters(g) {
@@ -143,7 +150,7 @@ function renderCounters(g) {
   }
   // While the layout is being edited the panel shows example rows, so it can be placed in a real game too.
   let rows = TLCounters.rows(g.counters);
-  if (!rows.length && editing) rows = TLCounters.rows(EXAMPLE_GAME.counters);
+  if (!rows.length && showsExample()) rows = TLCounters.rows(EXAMPLE_GAME.counters);
   panel.hidden = !rows.length;
   if (!rows.length) {
     panel.replaceChildren();
@@ -247,7 +254,7 @@ function oddsRange(side, range) {
 function renderOdds(g) {
   const panel = document.getElementById("odds");
   let v = TLOdds.oddsView(g.odds);
-  if (!v && editing) v = TLOdds.oddsView(EXAMPLE_GAME.odds);
+  if (!v && showsExample()) v = TLOdds.oddsView(EXAMPLE_GAME.odds);
   panel.classList.toggle("empty", !v);
   panel.hidden = false;
   if (!v) {
@@ -383,8 +390,13 @@ function renderHeroes(g) {
   return true;
 }
 
+// The opponents panel (T-614): the lobby's tribes as its header, a thin rule,
+// then the damage cap and one row per opponent. Hiding the panel hides its
+// tribes too. The header always has a chip or a reason, so the box is never empty.
 function renderOpponents(g) {
   const panel = document.getElementById("opponents");
+  const head = el("div", "opp-tribes");
+  head.append(tribeRow(g));
   const list = el("ol", "opp-list");
   list.setAttribute("aria-label", TLI18n.t("ov.slot.opponents"));
   for (const opponent of g.opponents) {
@@ -394,8 +406,7 @@ function renderOpponents(g) {
   const cap = TLWords.damageCap(g);
   const capLine = cap ? el("p", "damage-cap", cap.text) : null;
   if (capLine) capLine.title = cap.about;
-  panel.replaceChildren(...[capLine, list].filter(Boolean));
-  panel.classList.toggle("empty", !g.opponents.length && !cap);
+  panel.replaceChildren(...[head, capLine, list].filter(Boolean));
   panel.hidden = false;
 }
 
@@ -455,15 +466,14 @@ function renderLobby(v) {
 }
 
 function render() {
-  const legend = document.getElementById("legend");
   const g = current();
   const lobby = document.getElementById("lobby");
   // Only on the lobby screen with no game on; while arranging, the example.
-  const lobbyShown = !game && (editing ? EXAMPLE_LOBBY : lobbyView && lobbyView.in_lobby ? lobbyView : null);
+  const lobbyShown = !game && (editing ? EXAMPLE_LOBBY : previewing ? null : lobbyView && lobbyView.in_lobby ? lobbyView : null);
   if (lobbyShown) renderLobby(lobbyShown);
   else lobby.hidden = true;
   if (!g && lobbyShown) {
-    for (const id of ["status", "heroes", "counters", "tribes", "opponents", "odds", "legend"]) document.getElementById(id).hidden = true;
+    for (const id of ["status", "heroes", "opponents", "counters", "odds"]) document.getElementById(id).hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -474,11 +484,9 @@ function render() {
     status.className = "panel status";
     status.textContent = scene === "battlegrounds_loading" ? TLI18n.t("ov.status.loading") : TLI18n.t("ov.status.waiting");
     document.getElementById("heroes").hidden = true;
-    document.getElementById("counters").hidden = true;
-    document.getElementById("tribes").hidden = true;
     document.getElementById("opponents").hidden = true;
+    document.getElementById("counters").hidden = true;
     document.getElementById("odds").hidden = true;
-    legend.hidden = true;
     renderMarks(null);
     if (window.TLHover) window.TLHover.render();
     return;
@@ -489,16 +497,13 @@ function render() {
   const heroesSlot = document.getElementById("heroes").closest(".slot");
   if (renderHeroes(g) && g.phase === "starting" && !heroesSlot.hidden) document.getElementById("status").hidden = true;
   const showPanels = g.phase === "playing" || g.phase === "over";
-  document.getElementById("counters").hidden = !showPanels;
-  document.getElementById("tribes").hidden = !showPanels;
   document.getElementById("opponents").hidden = !showPanels;
+  document.getElementById("counters").hidden = !showPanels;
   document.getElementById("odds").hidden = !showPanels;
-  legend.hidden = !showPanels;
   renderMarks(showPanels ? g : null);
   if (showPanels) {
-    renderCounters(g);
-    renderTribes(g);
     renderOpponents(g);
+    renderCounters(g);
     renderOdds(g);
   }
   if (window.TLHover) window.TLHover.render();
@@ -522,6 +527,8 @@ async function refresh() {
   game = fresh;
   scene = typeof where === "string" ? where : null;
   boardArea = settings && settings.leaderboard ? settings.leaderboard.area : null;
+  keyTaken = Boolean(settings && settings.hide_key_taken);
+  previewing = Boolean(settings && settings.preview);
   lobbyView = lobbyNow;
   if (window.TLHover) window.TLHover.setFailed(false);
   render();
@@ -559,7 +566,7 @@ function showError(error) {
   const panel = document.getElementById("status");
   panel.className = "panel status unreadable";
   panel.textContent = TLI18n.t("ov.error.update", { error });
-  for (const id of ["heroes", "counters", "tribes", "opponents", "odds", "legend", "lobby"]) document.getElementById(id).hidden = true;
+  for (const id of ["heroes", "opponents", "counters", "odds", "lobby"]) document.getElementById(id).hidden = true;
   renderMarks(null);
   if (window.TLHover) window.TLHover.setFailed(true);
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-game-review"
+description = "Enables the game_review command without any pre-configured scope."
+commands.allow = ["game_review"]
+
+[[permission]]
+identifier = "deny-game-review"
+description = "Denies the game_review command without any pre-configured scope."
+commands.deny = ["game_review"]

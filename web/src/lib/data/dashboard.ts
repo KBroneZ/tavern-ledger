@@ -120,7 +120,7 @@ export function heroCells(rows: readonly HeroRow[], m: Mode): Cell[][] {
 export const RECORD_COLUMNS: Column[] = [
   { label: t("records.col.record") },
   { label: t("records.col.value"), numeric: true },
-  { label: t("records.col.date") },
+  { label: t("records.col.date"), nowrap: true },
   // How many games back a record: Advanced only (T-559, D-131).
   { label: t("records.col.games"), advanced: true },
 ];
@@ -169,7 +169,7 @@ export function gameColumns(withMode: boolean): Column[] {
   return [
     { label: t("games.col.hero") },
     { label: t("games.col.place"), numeric: true },
-    { label: t("games.col.date") },
+    { label: t("games.col.date"), nowrap: true },
     ...(withMode ? [{ label: t("games.col.mode") }] : []),
     // Simple keeps the key ones; rounds and actions per minute are Advanced (T-559).
     { label: t("games.col.rounds"), numeric: true, advanced: true },

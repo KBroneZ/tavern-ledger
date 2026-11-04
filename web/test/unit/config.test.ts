@@ -104,6 +104,8 @@ test("the CSP allows scripts and styles from the site only and connects to Supab
   assert.equal(directives["connect-src"], "https://abcd.supabase.co");
   assert.equal(directives["base-uri"], "'none'");
   assert.equal(directives["form-action"], "'self'");
+  assert.equal(directives["worker-src"], "'self'");
+  assert.equal(directives["manifest-src"], "'self'");
   assert.doesNotMatch(csp, /unsafe|\*|data:/);
 });
 
@@ -114,6 +116,20 @@ test("with accounts closed the CSP allows no script, form or connection", () => 
   }
   assert.match(csp, /(^|; )style-src 'self'(;|$)/);
   assert.match(csp, /(^|; )font-src 'self'(;|$)/);
+  // No script, so no worker; the manifest is a plain file the browser reads (T-637).
+  assert.doesNotMatch(csp, /worker-src/);
+  assert.match(csp, /(^|; )manifest-src 'self'(;|$)/);
+});
+
+test("the service worker's own policy differs from the pages' only in what it may fetch (T-637)", () => {
+  // The worker fetches the site's own files to keep them: connect-src is 'self'
+  // instead of Supabase, which it never talks to (the pages do, past the worker).
+  const page = contentSecurityPolicy("https://abcd.supabase.co");
+  const worker = contentSecurityPolicy("https://abcd.supabase.co", { serviceWorker: true });
+  assert.equal(worker, page.replace("connect-src https://abcd.supabase.co", "connect-src 'self'"));
+  assert.doesNotMatch(worker, /supabase/);
+  // Accounts closed: no worker at all.
+  assert.equal(contentSecurityPolicy(null, { serviceWorker: true }), contentSecurityPolicy(null));
 });
 
 test("pictures: the open site adds exactly HearthstoneJSON's art host (D-074) and the game textures' host (D-151) to img-src", () => {
@@ -123,7 +139,7 @@ test("pictures: the open site adds exactly HearthstoneJSON's art host (D-074) an
   assert.equal(
     contentSecurityPolicy("https://abcd.supabase.co"),
     "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://art.hearthstonejson.com https://assets.tavernledger.net; " +
-      "font-src 'self'; connect-src https://abcd.supabase.co; base-uri 'none'; form-action 'self'",
+      "font-src 'self'; connect-src https://abcd.supabase.co; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'",
   );
   // Accounts closed: no script draws a game, so no picture comes from outside.
   assert.match(contentSecurityPolicy(null), /(^|; )img-src 'self'(;|$)/);
@@ -215,7 +231,7 @@ test("Turnstile's policy adds only its own origin, to script-src and frame-src, 
     withCaptcha,
     plain
       .replace("script-src 'self'", `script-src 'self' ${TURNSTILE_SCRIPT_SOURCE}`)
-      .replace("; base-uri", `; frame-src ${TURNSTILE_ORIGIN}; base-uri`),
+      .replace("; worker-src", `; frame-src ${TURNSTILE_ORIGIN}; worker-src`),
   );
   assert.equal(TURNSTILE_ORIGIN, "https://challenges.cloudflare.com");
   // Scripts: Cloudflare's one file only; the frame: its origin.

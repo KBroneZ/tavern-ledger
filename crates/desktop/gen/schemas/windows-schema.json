@@ -231,6 +231,12 @@
           "markdownDescription": "Enables the curious_stats command without any pre-configured scope."
         },
         {
+          "description": "Enables the diagnostics_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-diagnostics-preview",
+          "markdownDescription": "Enables the diagnostics_preview command without any pre-configured scope."
+        },
+        {
           "description": "Enables the edit_lobby_tribes command without any pre-configured scope.",
           "type": "string",
           "const": "allow-edit-lobby-tribes",
@@ -279,6 +285,18 @@
           "markdownDescription": "Enables the game_recap command without any pre-configured scope."
         },
         {
+          "description": "Enables the game_review command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-review",
+          "markdownDescription": "Enables the game_review command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the game_review_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-game-review-status",
+          "markdownDescription": "Enables the game_review_status command without any pre-configured scope."
+        },
+        {
           "description": "Enables the game_stats command without any pre-configured scope.",
           "type": "string",
           "const": "allow-game-stats",
@@ -289,6 +307,12 @@
           "type": "string",
           "const": "allow-game-why",
           "markdownDescription": "Enables the game_why command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the hero_groups command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-hero-groups",
+          "markdownDescription": "Enables the hero_groups command without any pre-configured scope."
         },
         {
           "description": "Enables the list_games command without any pre-configured scope.",
@@ -403,6 +427,12 @@
           "type": "string",
           "const": "allow-overlay-state",
           "markdownDescription": "Enables the overlay_state command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the period_overview command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-period-overview",
+          "markdownDescription": "Enables the period_overview command without any pre-configured scope."
         },
         {
           "description": "Enables the preview_problem_report command without any pre-configured scope.",
@@ -555,6 +585,12 @@
           "markdownDescription": "Denies the curious_stats command without any pre-configured scope."
         },
         {
+          "description": "Denies the diagnostics_preview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-diagnostics-preview",
+          "markdownDescription": "Denies the diagnostics_preview command without any pre-configured scope."
+        },
+        {
           "description": "Denies the edit_lobby_tribes command without any pre-configured scope.",
           "type": "string",
           "const": "deny-edit-lobby-tribes",
@@ -603,6 +639,18 @@
           "markdownDescription": "Denies the game_recap command without any pre-configured scope."
         },
         {
+          "description": "Denies the game_review command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-review",
+          "markdownDescription": "Denies the game_review command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the game_review_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-game-review-status",
+          "markdownDescription": "Denies the game_review_status command without any pre-configured scope."
+        },
+        {
           "description": "Denies the game_stats command without any pre-configured scope.",
           "type": "string",
           "const": "deny-game-stats",
@@ -613,6 +661,12 @@
           "type": "string",
           "const": "deny-game-why",
           "markdownDescription": "Denies the game_why command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the hero_groups command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-hero-groups",
+          "markdownDescription": "Denies the hero_groups command without any pre-configured scope."
         },
         {
           "description": "Denies the list_games command without any pre-configured scope.",
@@ -727,6 +781,12 @@
           "type": "string",
           "const": "deny-overlay-state",
           "markdownDescription": "Denies the overlay_state command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the period_overview command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-period-overview",
+          "markdownDescription": "Denies the period_overview command without any pre-configured scope."
         },
         {
           "description": "Denies the preview_problem_report command without any pre-configured scope.",
@@ -2905,6 +2965,72 @@
           "type": "string",
           "const": "core:window:deny-unminimize",
           "markdownDescription": "Denies the unminimize command without any pre-configured scope."
+        },
+        {
+          "description": "No features are enabled by default, as we believe\nthe shortcuts can be inherently dangerous and it is\napplication specific if specific shortcuts should be\nregistered or unregistered.\n",
+          "type": "string",
+          "const": "global-shortcut:default",
+          "markdownDescription": "No features are enabled by default, as we believe\nthe shortcuts can be inherently dangerous and it is\napplication specific if specific shortcuts should be\nregistered or unregistered.\n"
+        },
+        {
+          "description": "Enables the is_registered command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-is-registered",
+          "markdownDescription": "Enables the is_registered command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the register command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-register",
+          "markdownDescription": "Enables the register command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the register_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-register-all",
+          "markdownDescription": "Enables the register_all command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the unregister command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-unregister",
+          "markdownDescription": "Enables the unregister command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the unregister_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:allow-unregister-all",
+          "markdownDescription": "Enables the unregister_all command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the is_registered command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-is-registered",
+          "markdownDescription": "Denies the is_registered command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the register command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-register",
+          "markdownDescription": "Denies the register command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the register_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-register-all",
+          "markdownDescription": "Denies the register_all command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the unregister command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-unregister",
+          "markdownDescription": "Denies the unregister command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the unregister_all command without any pre-configured scope.",
+          "type": "string",
+          "const": "global-shortcut:deny-unregister-all",
+          "markdownDescription": "Denies the unregister_all command without any pre-configured scope."
         },
         {
           "description": "This permission set configures which kind of\nupdater functions are exposed to the frontend.\n\n#### Granted Permissions\n\nThe full workflow from checking for updates to installing them\nis enabled.\n\n\n#### This default permission set includes:\n\n- `allow-check`\n- `allow-download`\n- `allow-install`\n- `allow-download-and-install`",

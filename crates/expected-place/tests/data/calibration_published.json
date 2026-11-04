@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-02",
+  "format": 1,
+  "modes": {
+    "duos": {
+      "builds": [
+        {
+          "buckets": [
+            {
+              "from": 1,
+              "games": 30,
+              "real": 1.0,
+              "rows": 30,
+              "said": 1.5,
+              "to": 2
+            },
+            {
+              "from": 2,
+              "games": 30,
+              "real": 3.0,
+              "rows": 30,
+              "said": 2.5,
+              "to": 3
+            },
+            {
+              "from": 3,
+              "games": 0,
+              "real": null,
+              "rows": 0,
+              "said": null,
+              "to": 4
+            }
+          ],
+          "build": 200,
+          "games": 30,
+          "rows": 60
+        },
+        {
+          "buckets": [
+            {
+              "from": 1,
+              "games": null,
+              "real": null,
+              "rows": null,
+              "said": null,
+              "to": 2
+            },
+            {
+              "from": 2,
+              "games": 0,
+              "real": null,
+              "rows": 0,
+              "said": null,
+              "to": 3
+            },
+            {
+              "from": 3,
+              "games": 25,
+              "real": 4.0,
+              "rows": 25,
+              "said": 3.3,
+              "to": 4
+            }
+          ],
+          "build": 100,
+          "games": 25,
+          "rows": 35
+        }
+      ],
+      "encoder": 1,
+      "folds": 5,
+      "games": 63,
+      "mean_distance": {
+        "model": 0.81,
+        "overall": 1.25,
+        "per_turn": 1.1
+      },
+      "min_games": 150,
+      "other_games": 8,
+      "ready": false,
+      "rows": 103,
+      "thin_games": 20
+    },
+    "solo": null
+  }
+}

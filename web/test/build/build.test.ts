@@ -37,12 +37,14 @@ function files(dir: string): string[] {
 const ALL = existsSync(DIST) ? files(DIST) : [];
 const PAGES = ALL.filter((f) => f.endsWith(".html"));
 const name = (f: string) => relative(DIST, f).replaceAll("\\", "/");
-/** The minion pages (T-578, D-134): the only built pages with card art and structured data. */
+/** The minion pages (T-578, D-134): the only built pages with card art. */
 const isMinionPage = (f: string) => /^(?:es\/)?minions\//.test(name(f));
+// Pages with a structured-data block (T-578, T-703): a data block, never run.
+const hasJsonLd = (f: string) => isMinionPage(f) || /^(?:es\/)?(?:download|simulator)\/index\.html$/.test(name(f));
 /** Card art from HearthstoneJSON's image host (D-074), as the minion pages show it: lazy, with a local fallback. */
 const CARD_ART =
   /^<img src="https:\/\/art\.hearthstonejson\.com\/v1\/256x\/[A-Za-z0-9_]{1,64}\.jpg" data-fallback="\/placeholders\/card-\d\.svg" alt="" width="\d+" height="\d+" loading="lazy" decoding="async">$/;
-/** The minion pages' structured data: a data block, never run (minions.test.ts parses it). */
+/** Structured data: a data block, never run (minions.test.ts and structured.test.ts parse it). */
 const JSON_LD = /<script type="application\/ld\+json">[^<]*<\/script>/g;
 /** A page with the anti-robot check (T-562): its address is one of TURNSTILE_PAGES. */
 const isTurnstilePage = (f: string) => TURNSTILE_PAGES.includes(`/${name(f).replace(/index\.html$/, "")}`);
@@ -84,10 +86,10 @@ test("every page has the CSP as its first meta after the charset", () => {
 test("no inline script, style or event handler in any page", () => {
   for (const page of PAGES) {
     const raw = readFileSync(page, "utf8");
-    const html = isMinionPage(page) ? raw.replace(JSON_LD, "") : raw;
+    const html = hasJsonLd(page) ? raw.replace(JSON_LD, "") : raw;
     for (const tag of html.matchAll(/<script\b[^>]*>/g)) {
-      // Our bundles, or the language script (public/lang.js, T-508).
-      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js)"/, `${name(page)}: ${tag[0]}`);
+      // Our bundles, or the language script (public/lang.js, T-508) or the web app's (public/pwa.js, T-637).
+      assert.match(tag[0], /\ssrc="(?:\/_astro\/[^"]+\.js|\/lang\.js|\/pwa\.js)"/, `${name(page)}: ${tag[0]}`);
     }
     assert.doesNotMatch(html, /<script\b[^>]*>[^<\s]/, name(page));
     assert.doesNotMatch(html, /<style\b/, name(page));
@@ -134,7 +136,8 @@ test("_headers carries the same policy plus frame-ancestors and the other securi
   assert.match(headers, /Cross-Origin-Opener-Policy: same-origin/);
   assert.match(headers, /\/_astro\/\*\n  Cache-Control: public, max-age=31536000, immutable/);
   assert.match(headers, /Permissions-Policy: camera=\(\)/);
-  assert.match(headers, /Strict-Transport-Security: max-age=\d+; includeSubDomains/);
+  // One year, without preload: preload is a separate, hard-to-undo step.
+  assert.match(headers, /Strict-Transport-Security: max-age=31536000; includeSubDomains\n/);
 });
 
 test("_headers: the simulator's worker alone gets 'wasm-unsafe-eval', replacing the site-wide policy", () => {
@@ -224,10 +227,10 @@ test("the player profile page: noindex, and with accounts open a short privacy l
   }
 });
 
-test("the simulator page: noindex, its script and frame when accounts are open, the notice when closed", () => {
+test("the simulator page: indexable with its script and frame when accounts are open, the notice (noindex) when closed", () => {
   for (const file of SIMULATOR_FILES) {
     const html = readFileSync(join(DIST, file), "utf8");
-    assert.match(html, /<meta name="robots" content="noindex">/, file);
+    assert.equal(html.includes('<meta name="robots" content="noindex">'), !CONFIG, file);
     if (CONFIG) {
       for (const id of ["sim-load", "sim-table", "sim-opponent", "sim-player", "sim-result", "sim-mode"]) assert.match(html, new RegExp(`id="${id}"`), `${file}: ${id}`);
       assert.match(html, /state-loading/, "the loading blocks keep the room");
@@ -311,10 +314,12 @@ test("accounts closed: no form, no script and no backend anywhere", { skip: !!CO
   }
   for (const page of PAGES) {
     // The language switch links a notice page to its own twin (T-508); no other link to them.
-    const html = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
+    const raw = readFileSync(page, "utf8").replace(/<a\b[^>]*data-lang-switch[^>]*>/g, "");
+    const html = hasJsonLd(page) ? raw.replace(JSON_LD, "") : raw;
     assert.doesNotMatch(html, /<script\b|<form\b|<input\b|href="(?:\/es)?\/(signin|account|forgot-password)\/"/, name(page));
   }
-  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), []);
+  // The one script is /sw.js, which only removes an older offline worker (T-637; pwa.test.ts checks it makes no request).
+  assert.deepEqual(ALL.filter((f) => f.endsWith(".js")).map(name), ["sw.js"]);
   for (const file of ALL) {
     const text = readFileSync(file, "utf8");
     // No project URL (the policy links to supabase.com, which is fine) and no key of any kind.
@@ -417,10 +422,11 @@ test("pictures are our own files, with their size and a text alternative", () =>
       // Built pages show made-up data only, so their pictures are our own
       // placeholders, plus the home page's painting (T-530) and every other
       // page's (T-546); card art (D-074) is drawn in the browser, but on the
-      // minion pages (D-134), which are built from the card data.
+      // minion pages (D-134), which are built from the card data. The press
+      // page shows the logo (T-704).
       if (isMinionPage(page) && CARD_ART.test(img)) continue;
       const src = /\ssrc="([^"]*)"/.exec(img)?.[1] ?? "";
-      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp)$/, `${name(page)}: ${img}`);
+      assert.match(src, /^\/(?:placeholders\/(?:hero|card)-\d\.svg|art\/home\/tavern-\d+\.webp|art\/pages\/[a-z]+-\d+\.webp|press\/lockup\.svg)$/, `${name(page)}: ${img}`);
       assert.ok(existsSync(join(DIST, src)), src);
       // Width and height keep the room (no layout shift); alt is there, empty when decorative.
       assert.match(img, /\swidth="\d+"/, img);
@@ -745,6 +751,26 @@ test("accounts open: the account page has the simulator switch, off until read, 
     assert.match(account, /id="simulator-message" role="status" aria-live="polite"/, lang);
     assert.match(page(privacy), /id="improving-the-simulator"/, lang);
     // The sentence and the link are separate words.
+    assert.doesNotMatch(account, /[.,]<a href="(\/es)?\/privacy\//, lang);
+  }
+});
+
+test("accounts open: the account page has the training switch and its notice, with the policy link (T-651)", { skip: !CONFIG }, () => {
+  const page = (p: string) => readFileSync(join(DIST, p), "utf8");
+  for (const [lang, file, privacy, label] of [
+    ["en", "account/index.html", "privacy/index.html", /Use my uploaded games to train the expected-place model/],
+    ["es", "es/account/index.html", "es/privacy/index.html", /Usar mis partidas subidas para entrenar el modelo de puesto esperado/],
+  ] as const) {
+    const account = page(file);
+    assert.match(account, /id="training-form"/, lang);
+    assert.match(account, /<input class="toggle" type="checkbox" id="train-model" name="train_model" aria-describedby="train-model-hint">/, lang);
+    assert.match(account, label, lang);
+    assert.match(account, new RegExp(`href="${lang === "es" ? "/es" : ""}/privacy/#training-the-expected-place-model"`), lang);
+    assert.match(account, /id="training-message" role="status" aria-live="polite"/, lang);
+    // The notice ships hidden: the script shows it to accounts made before the change.
+    assert.match(account, /<aside class="panel" id="training-notice"[^>]*hidden/, lang);
+    assert.match(account, /href="#training-heading"/, lang);
+    assert.match(page(privacy), /id="training-the-expected-place-model"/, lang);
     assert.doesNotMatch(account, /[.,]<a href="(\/es)?\/privacy\//, lang);
   }
 });

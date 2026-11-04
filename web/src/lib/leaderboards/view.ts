@@ -37,7 +37,8 @@ function columns(def: BoardDef, m: Mode): Column[] {
     { label: lt("col.player") },
     ...(def.key === "hero_avg_place" ? [{ label: lt("col.hero") }] : []),
     { label: valueLabel(def, m), numeric: true },
-    { label: lt("col.games"), numeric: true },
+    // The games board's value is the games: a second "Games" column would repeat it.
+    ...(def.key === "games" ? [] : [{ label: lt("col.games"), numeric: true }]),
   ];
 }
 
@@ -59,7 +60,7 @@ function valueCell(def: BoardDef, row: BoardRow): Cell {
   return fewGames(row) ? { node: h("span", {}, value, fewMark(def)) } : value;
 }
 
-/** One table row: standing, the player linked to their public profile, (hero), value, games. */
+/** One table row: standing, the player linked to their public profile, (hero), value, (games). */
 export function rowCells(def: BoardDef, row: BoardRow): Cell[] {
   const player: Cell = { node: h("a", { href: publicProfilePath(row.userId) }, row.name) };
   return [
@@ -67,7 +68,7 @@ export function rowCells(def: BoardDef, row: BoardRow): Cell[] {
     player,
     ...(def.key === "hero_avg_place" ? [heroCell(row.hero)] : []),
     valueCell(def, row),
-    row.games,
+    ...(def.key === "games" ? [] : [row.games]),
   ];
 }
 

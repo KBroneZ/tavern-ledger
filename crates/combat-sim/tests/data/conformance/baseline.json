@@ -1,0 +1,63 @@
+{
+  "combats": {
+    "0e724411eb4cae47": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": null,
+      "result": "won",
+      "said": "odds"
+    },
+    "286ec1b79444b854": {
+      "build": 253216,
+      "close": false,
+      "likely": "won",
+      "mode": "duos",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "304d95ea7f3667a3": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 1,
+        "diverge": {
+          "attack": 1,
+          "card": "BG28_603t",
+          "rule": "replay_first_attacker"
+        },
+        "matched": 0,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    },
+    "99a41256f47b9815": {
+      "build": 254477,
+      "close": false,
+      "likely": "won",
+      "mode": "solo",
+      "replay": {
+        "attacks": 1,
+        "diverge": null,
+        "matched": 1,
+        "rerolled": 0
+      },
+      "result": "won",
+      "said": "odds"
+    }
+  },
+  "engine": "0.16.0",
+  "format": 1,
+  "seed": 24301,
+  "trials": 500
+}

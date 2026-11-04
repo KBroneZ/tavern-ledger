@@ -86,7 +86,7 @@ test("the accuracy page fetches nothing and runs no script of its own", () => {
   for (const page of PAGES) {
     const html = read(page);
     const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
-    for (const src of scripts) assert.match(src, /^\/(lang\.js|_astro\/[^"]*\.js)$/, `${page}: ${src}`);
+    for (const src of scripts) assert.match(src, /^\/(lang\.js|pwa\.js|_astro\/[^"]*\.js)$/, `${page}: ${src}`);
     assert.ok(!html.includes("accuracy.json"), page);
   }
 });

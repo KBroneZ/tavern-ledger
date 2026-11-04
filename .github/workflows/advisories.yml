@@ -1,0 +1,55 @@
+name: Advisories
+
+# Known security advisories in the pinned dependencies (Cargo.lock, both
+# package-lock.json files, requirements.txt), checked with osv-scanner by
+# tools/check_advisories.py: an advisory with a fix, medium or higher, or of
+# unknown severity fails, unless tools/advisory_ignores.toml says why it does
+# not apply. CI calls this workflow on every pull request and push (its
+# `advisories` job is part of the required `check`), and advisories-daily.yml
+# calls it every day on main, so a new advisory shows up without a code change.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      # Keep equal to ci.yml's: `cargo metadata` checks where ignored crates are built.
+      RUST_VERSION: 1.96.0
+      # osv-scanner is not a third-party action: the release file is downloaded
+      # from the project's releases and checked against its SHA-256 (also in
+      # the release's osv-scanner_SHA256SUMS), like gitleaks and Deno in ci.yml.
+      OSV_SCANNER_VERSION: 2.6.0
+      OSV_SCANNER_SHA256: ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13.16"
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal
+          rustup default "$RUST_VERSION"
+
+      - name: Install osv-scanner (pinned, checksum verified)
+        run: |
+          bin="$RUNNER_TEMP/osv-scanner"
+          curl -sSfL --proto '=https' --retry 3 --retry-all-errors --max-time 120 -o "$bin" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SCANNER_SHA256}  $bin" | sha256sum -c -
+          chmod +x "$bin"
+
+      # Asks osv.dev about every pinned package; a network or API failure
+      # fails the step instead of passing it.
+      - name: Advisories
+        run: python tools/check_advisories.py --scanner "$RUNNER_TEMP/osv-scanner"

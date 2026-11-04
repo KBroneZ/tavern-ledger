@@ -25,9 +25,6 @@ export const ES: Record<DlKey, string> = {
   "beta.line":
     "Versión temprana y sin firmar: Windows te avisará (paso 2). ¿Algún fallo? Usa «Informar de un problema» en la aplicación.",
 
-  "store.line": "¿Prefieres que Windows no te avise? Consíguela en Microsoft Store, que la instala y la actualiza por ti.",
-  "store.link": "Tavern Ledger en Microsoft Store",
-
   "steps.title": "Instálala en cuatro pasos",
   "step1.title": "Descarga el instalador",
   "step1.line": "Pulsa Descargar y conserva el archivo.",
@@ -37,6 +34,8 @@ export const ES: Record<DlKey, string> = {
   "step2.line": "Windows avisará: pulsa «Más información» → «Ejecutar de todas formas».",
   "step2.more":
     "Puede que Windows diga «Windows protegió su PC». Lo muestra porque el instalador aún no está firmado y lo han descargado pocas personas. Comprueba que el nombre del archivo coincide y hazlo solo con el archivo de esta página o de las versiones del proyecto en GitHub.",
+  "step2.sac":
+    "En Windows 11, el Control inteligente de aplicaciones puede bloquearlo, sin «Ejecutar de todas formas»: Windows no tiene forma de dejar pasar una aplicación sin firmar. Hasta que el instalador esté firmado, esta beta no se puede instalar en un PC con el Control inteligente de aplicaciones activado.",
   "step3.title": "Instálala",
   "step3.line": "Sigue el instalador; no pide permisos de administrador.",
   "step3.more":
@@ -74,6 +73,13 @@ export const ES: Record<DlKey, string> = {
     "Desde la versión 0.2.1 la aplicación se actualiza sola: busca una versión nueva al iniciarse y cada pocas horas, y te pide reiniciar cuando hay una lista.",
   "update.body":
     "Si tienes la versión 0.1.0, instala una vez encima la versión nueva de esta página: sustituye la aplicación y conserva tus partidas y ajustes. Después, las actualizaciones llegan solas, firmadas por el proyecto, y solo se instalan cuando pulsas «Reiniciar ahora». Puedes desactivar la búsqueda en los Ajustes de la aplicación, en Actualizaciones.",
+  "other.title": "Otras formas de instalarla",
+  "other.short.both": "La misma aplicación desde Microsoft Store o con winget.",
+  "other.short.store": "La misma aplicación desde Microsoft Store.",
+  "other.short.winget": "La misma aplicación con winget.",
+  "other.store": "La edición de Microsoft Store se instala sin aviso de Windows, y la Store trae sus actualizaciones.",
+  "other.store.link": "Consíguela en Microsoft Store",
+  "other.winget": "Con winget, en una terminal (después la aplicación se actualiza sola, como desde esta página):",
   "remove.title": "Desinstalar",
   "remove.short": "Quítala en Configuración de Windows, en Aplicaciones. Tus partidas se conservan.",
   "remove.body":

@@ -98,7 +98,7 @@ test("each cause gets one plain line and its evidence, in English and Spanish", 
     rule: miss({ id: "replay_stats", attack: 4, rule: "replay_stats", card: PLAIN }),
     noReplay: miss({ id: "no_replay_exact", replay: "not_saved" }),
   };
-  assert.equal(causeLine(lines.chance, nameOf), "Chance: the replay matched until the dice.");
+  assert.equal(causeLine(lines.chance, nameOf), "Dice luck: the replay matched the game until the dice rolled.");
   assert.equal(causeLine(lines.missing, nameOf), "Not seen: Blood Gem upgrades.");
   assert.equal(causeLine(lines.approximate, nameOf), "Approximate: Plain Card.");
   assert.equal(causeLine(lines.rule, nameOf), "Rule differs at attack 4: Plain Card.");
@@ -135,7 +135,7 @@ test("a row shows the win odds, and a mark only when the likeliest result did no
   assert.equal(causeMark(matched), null, "nothing said for the expected result");
   assert.equal(oddsCell(matched).map(text).join(""), "100%");
   const chance = combat({ result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "chance", attacks: 9 } });
-  assert.equal(oddsCell(chance).map(text).join(""), "58% Chance");
+  assert.equal(oddsCell(chance).map(text).join(""), "58% Dice luck");
   const noReplay = combat({ result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "no_replay_exact", replay: "not_saved" } });
   assert.equal(text(causeMark(noReplay)!), "—no cause given", "a quiet dash, the words for screen readers only");
   const rule = combat({ result: "lost", odds: { won: 0.7, tied: 0, lost: 0.3 }, cause: { id: "replay_stats", attack: 4, rule: "replay_stats", card: PLAIN } });
@@ -145,7 +145,7 @@ test("a row shows the win odds, and a mark only when the likeliest result did no
   // The detail: the odds in full, then the cause and its evidence.
   const detail = whyDetail(chance, nameOf).map(text);
   assert.equal(detail[0], "Odds 58% win · 4% tie · 38% loss");
-  assert.equal(detail[1], "Chance: the replay matched until the dice.");
+  assert.equal(detail[1], "Dice luck: the replay matched the game until the dice rolled.");
   assert.match(detail[2], /all 9 attacks/);
   assert.equal(whyDetail(matched, nameOf).length, 1, "the expected result: the odds only");
   setLang("es");
@@ -267,7 +267,7 @@ test("the engine's answer fills each row; a combat it does not answer, or no ans
   const page = fakePage([1, 3]);
   const chance = { ...good, round: 1, result: "lost", odds: { won: 0.58, tied: 0.04, lost: 0.38 }, cause: { id: "chance", attacks: 9 } };
   fillWhy(page.root, readWhy(answer([chance])));
-  assert.deepEqual(page.oddsText(), ["58% Chance", "—"], "never left waiting");
+  assert.deepEqual(page.oddsText(), ["58% Dice luck", "—"], "never left waiting");
   assert.deepEqual(page.whyCount(), [3, 0]);
   assert.equal(page.status.textContent, "the note");
   const failed = fakePage([1, 3]);

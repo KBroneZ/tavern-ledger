@@ -141,12 +141,14 @@ fn with_combat<R>(
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -338,12 +340,14 @@ fn summons_stop_at_seven_minions() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -380,6 +384,7 @@ fn titus_makes_deathrattles_trigger_again() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState::default(),
         ],
@@ -425,6 +430,7 @@ fn avenge_regains_divine_shield_and_with_it_taunt() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState::default(),
         ],
@@ -467,12 +473,14 @@ fn scarlet_survivor_gains_shield_once_at_six_attack() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -502,12 +510,14 @@ fn attack_order_goes_left_to_right_and_wraps() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -543,12 +553,14 @@ fn a_summon_in_the_attackers_place_attacks_next() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -649,12 +661,14 @@ fn leeroy_destroys_the_minion_that_killed_it_even_through_a_shield() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -694,12 +708,14 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -723,12 +739,14 @@ fn rally_strips_taunt_and_reborn_from_the_target() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,
@@ -761,12 +779,14 @@ fn stealth_hides_taunt() {
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
             SideState {
                 units: p.start[1].clone(),
                 next: 0,
                 values: Default::default(),
                 deaths: 0,
+                ..SideState::default()
             },
         ],
         next_uid: 100,

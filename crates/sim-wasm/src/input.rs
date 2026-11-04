@@ -26,6 +26,8 @@ const MAX_CAP: i64 = 1_000;
 const MAX_GIFTS: usize = 4;
 /// A game-long value as the saved report keeps it (bg-parser's MAX_GAME_VALUE).
 const MAX_GAME_VALUE: i64 = 99_999;
+/// A card database id among them: the Deity's (bg-parser's MAX_DBF).
+const MAX_DBF: i64 = 10_000_000;
 /// Hero powers, or trinkets, one board brings: as the saved report keeps
 /// them (bg-parser's MAX_KIT_CARDS).
 const MAX_KIT_CARDS: usize = 4;
@@ -227,6 +229,15 @@ fn game_values(v: Option<&Value>) -> Res<GameValues> {
             "undead_atk" => &mut out.undead_attack,
             "beetle_atk" => &mut out.beetle.0,
             "beetle_health" => &mut out.beetle.1,
+            // The Deity (T-671): its database id has its own bound.
+            "deity_dbf" => {
+                out.deity.dbf = int(Some(n), "the Deity's id", 0, MAX_DBF)? as i32;
+                continue;
+            }
+            "deity_atk" => &mut out.deity.attack,
+            "deity_health" => &mut out.deity.health,
+            "deity_needed" => &mut out.deity.needed,
+            "deity_progress" => &mut out.deity.progress,
             _ => return Err("values holds an unknown name".into()),
         };
         *slot = int(Some(n), "a game-long value", 0, MAX_GAME_VALUE)? as i32;

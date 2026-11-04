@@ -206,6 +206,32 @@ pub struct GameValues {
     pub undead_attack: i32,
     /// Attack and Health the side's Beetles have on top this game.
     pub beetle: (i32, i32),
+    /// The player's Deity, hidden until it awakens (T-671).
+    pub deity: Deity,
+}
+
+/// A player's Deity as the game keeps it for the combat (T-671): its
+/// database id (C'Thun or Y'Shaarj), its Attack and Health, and the friendly
+/// Aberration deaths this combat that awaken it, needed and counted. All 0
+/// when unknown: then no Deity awakens in the engine.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Deity {
+    pub dbf: i32,
+    pub attack: i32,
+    pub health: i32,
+    pub needed: i32,
+    pub progress: i32,
+}
+
+impl Deity {
+    /// Whether the board brings a Deity the engine can awaken: a Deity's
+    /// id, the deaths it needs and its stats.
+    pub fn known(&self) -> bool {
+        crate::cards::deity_card(self.dbf).is_some()
+            && self.needed > 0
+            && self.attack > 0
+            && self.health > 0
+    }
 }
 
 /// A hero power or trinket of a board's hero (T-628), by its card id.
@@ -220,8 +246,9 @@ pub struct KitCard {
     /// The friendly minion it names, by its index on the board (0 is the
     /// left-most).
     pub target: Option<usize>,
-    /// The minion it holds off the board (Lock and Load); `None` when it
-    /// holds none or it is not shown.
+    /// The minion it holds off the board (Lock and Load; on a board taken
+    /// after start of combat, Rapid Reanimation's copy waiting for space,
+    /// T-645); `None` when it holds none or it is not shown.
     pub held: Option<Minion>,
 }
 
@@ -273,6 +300,22 @@ impl Warband {
             values: GameValues::default(),
             kit: None,
         }
+    }
+
+    /// True when something on this board acts at the start of combat: a
+    /// minion, one of its Dark Gifts, a hero power or a trinket. A board
+    /// taken after the start of combat may already carry its effects, so the
+    /// odds for it are marked (T-632): one rule for every source, used by
+    /// the overlay and the website.
+    pub fn acts_at_start_of_combat(&self) -> bool {
+        self.minions.iter().any(|m| {
+            crate::cards::has_start_of_combat(&m.card_id)
+                || m.gifts.iter().any(|g| crate::gifts::has_start_of_combat(g))
+        }) || self
+            .kit
+            .iter()
+            .flat_map(Kit::cards)
+            .any(|c| crate::kit::has_start_of_combat(&c.card_id))
     }
 
     pub fn validate(&self) -> Result<(), BoardError> {

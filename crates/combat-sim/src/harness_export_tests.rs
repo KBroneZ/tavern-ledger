@@ -2,6 +2,7 @@ use super::*;
 use crate::harness_duos::Leg;
 use crate::harness_misses::Miss;
 use crate::model::Minion;
+use std::collections::BTreeSet;
 
 fn band(ids: &[&str]) -> Warband {
     Warband::new(ids.iter().map(|id| Minion::new(*id, 2, 2)).collect())
@@ -46,12 +47,15 @@ fn options() -> Options {
     }
 }
 
+static NOTHING_PROVEN: BTreeMap<i64, BTreeSet<String>> = BTreeMap::new();
+
 fn none() -> Checked<'static> {
     static NO_BUILDS: BTreeMap<i64, u32> = BTreeMap::new();
     Checked {
         misses: &[],
         replays: &[],
         builds: &NO_BUILDS,
+        proven: &NOTHING_PROVEN,
     }
 }
 
@@ -224,6 +228,7 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
         misses: &misses,
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let ours: Value = serde_json::from_str(&export_json(
         &accuracy(&[], &[], &options()),
@@ -246,6 +251,8 @@ fn the_synthetic_example_in_the_docs_has_the_export_shape() {
     );
     assert_eq!(keys(&v["misses"]), keys(&ours["misses"]));
     assert_eq!(keys(&v["builds"]), keys(&ours["builds"]));
+    assert_eq!(keys(&v["kits"]), keys(&ours["kits"]));
+    assert_eq!(keys(&v["kits"]["with"]), keys(&ours["kits"]["with"]));
     assert_eq!(
         keys(&v["misses"]["causes"][0]),
         keys(&ours["misses"]["causes"][0])
@@ -285,6 +292,7 @@ fn the_export_has_the_misses_by_cause_with_counts_and_shares() {
         misses: &misses,
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -318,6 +326,7 @@ fn the_export_has_the_game_builds_newest_first() {
         misses: &[],
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -340,6 +349,7 @@ fn only_the_newest_builds_are_exported() {
         misses: &[],
         replays: &[],
         builds: &builds,
+        proven: &NOTHING_PROVEN,
     };
     let a = accuracy(&[], &[], &options());
 
@@ -398,4 +408,130 @@ fn the_history_counts_games_by_build() {
 
     assert_eq!(h.builds, BTreeMap::from([(253_216, 2), (260_001, 1)]));
     assert_eq!(h.games, 4);
+}
+
+fn with_kit(mut c: LoggedCombat, powers: &[&str]) -> LoggedCombat {
+    c.player.kit = Some(crate::model::Kit {
+        powers: powers
+            .iter()
+            .map(|id| crate::model::KitCard::new(*id))
+            .collect(),
+        trinkets: Vec::new(),
+        round: Some(5),
+    });
+    c
+}
+
+#[test]
+fn a_hero_power_the_engine_refuses_blocks_by_name_not_as_a_refused_board() {
+    let c = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["BG99_HERO_999p"],
+    );
+    let a = accuracy(&[c], &[], &options());
+    assert_eq!((a.solo.blocked, a.solo.refused), (1, 0));
+    assert_eq!(a.blockers, [("BG99_HERO_999p".to_string(), 1)]);
+    assert_eq!((a.kits.combats, a.kits.with.combats), (1, 0));
+}
+
+#[test]
+fn the_kit_comparison_counts_only_combats_with_a_kit_and_scores_both_ways() {
+    // Sharpen Blades acts only in the shop: the same odds with and without.
+    let kit = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["TB_BaconShop_HP_001"],
+    );
+    let old = solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie);
+    let a = accuracy(&[kit, old], &[], &options());
+    assert_eq!(a.solo.report.combats, 2);
+    let k = &a.kits;
+    assert_eq!((k.combats, k.with.combats, k.without.combats), (1, 1, 1));
+    assert_eq!(k.with.brier, k.without.brier);
+    let json: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-01-01", &none())).unwrap();
+    assert_eq!(json["kits"]["combats"], 1);
+    assert_eq!(json["kits"]["scored"], 1);
+    assert!(render_accuracy(&a).contains("1 combats with a result have them"));
+}
+
+#[test]
+fn a_phylactery_without_its_mark_is_a_blocker_and_with_it_is_scored() {
+    let unmarked = with_kit(
+        solo(&["BGS_119"], &["BGS_119"], CombatResult::Tie),
+        &["BG20_HERO_282p"],
+    );
+    let mut marked = unmarked.clone();
+    marked.player.minions[0]
+        .gifts
+        .push(crate::gifts::PHYLACTERY_MARK.to_string());
+    let a = accuracy(&[unmarked, marked], &[], &options());
+    assert_eq!(a.blockers, [("BG20_HERO_282p".to_string(), 1)]);
+    assert_eq!((a.solo.blocked, a.solo.report.combats), (1, 1));
+}
+
+#[test]
+fn a_duos_combat_with_a_kit_on_its_second_board_is_compared() {
+    let mut c = duos(&["BGS_119"], &["BGS_119"], Some(CombatResult::Tie));
+    let mut second = c.own[0].clone();
+    second.board.kit = Some(crate::model::Kit {
+        powers: vec![crate::model::KitCard::new("TB_BaconShop_HP_001")],
+        trinkets: Vec::new(),
+        round: Some(5),
+    });
+    c.own.push(second);
+    let plain = duos(&["BGS_119"], &["BGS_119"], Some(CombatResult::Tie));
+    let a = accuracy(&[], &[c, plain], &options());
+    assert_eq!((a.kits.combats, a.kits.with.combats), (1, 1));
+}
+
+#[test]
+fn each_build_says_how_many_cards_are_proven_and_how_many_play_from_text_only() {
+    let builds = BTreeMap::from([(253_216, 4), (254_477, 2)]);
+    let proven = BTreeMap::from([(
+        254_477,
+        BTreeSet::from(["BGS_119".to_string(), "BG_ICC_026t".to_string()]),
+    )]);
+    let checked = Checked {
+        misses: &[],
+        replays: &[],
+        builds: &builds,
+        proven: &proven,
+    };
+    let a = accuracy(&[], &[], &options());
+    let modelled = crate::cards::modelled_ids().len();
+
+    let v: Value =
+        serde_json::from_str(&export_json(&a, &options(), "2026-10-27", &checked)).unwrap();
+
+    assert_eq!(v["format"], 5);
+    let newest = &v["builds"]["checked"][0];
+    assert_eq!(newest["build"], 254_477);
+    assert_eq!(newest["proven"], 2);
+    assert_eq!(newest["text_only"], modelled - 2);
+    let older = &v["builds"]["checked"][1];
+    assert_eq!(older["proven"], 0);
+    assert_eq!(older["text_only"], modelled);
+}
+
+#[test]
+fn the_history_keeps_each_games_build() {
+    let db = crate::harness::load_cards(include_str!("../tests/data/cards.json")).unwrap();
+    let line = |session: &str, build: &str| {
+        format!(
+            r#"{{"session": "{session}", "index": 1, "saved_at": 1, "report": {{"game_type": "GT_BATTLEGROUNDS", {build}"rounds": []}}}}"#
+        )
+    };
+    let jsonl = [
+        line("a", r#""build": 253216, "#),
+        line("b", ""),
+        line("c", r#""build": -1, "#),
+    ]
+    .join(
+        "
+",
+    );
+
+    let h = crate::harness::load_history(&jsonl, &db);
+
+    assert_eq!(h.game_builds, [Some(253_216), None, None]);
 }

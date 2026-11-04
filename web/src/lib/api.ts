@@ -373,6 +373,36 @@ export async function saveSimulatorConsent(client: SupabaseClient, on: boolean):
   }
 }
 
+/**
+ * The "train the expected-place model" switch (T-651, D-174): on unless the
+ * account turned it off (no row is on: legitimate interest, and off is the
+ * objection). Throws when it cannot be read, so the page never shows "on" for
+ * an account that may have objected.
+ */
+export async function loadTrainingChoice(client: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await client
+    .from("training_objection")
+    .select("train_model")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error("could not load the training setting");
+  if (data === null) return true;
+  if (typeof data.train_model !== "boolean") throw new Error("could not load the training setting");
+  return data.train_model;
+}
+
+/** null when saved, else the message to show. Only the signed-in owner can set it (set_training_choice). */
+export async function saveTrainingChoice(client: SupabaseClient, on: boolean): Promise<string | null> {
+  try {
+    const { data, error } = await client.rpc("set_training_choice", { p_train: on });
+    if (error) return switchErrorMessage(error);
+    if (data !== on) return switchErrorMessage({});
+    return null;
+  } catch {
+    return switchErrorMessage({});
+  }
+}
+
 /** Everything export_my_data() returns plus the bytes of each game file. */
 export async function exportAll(client: SupabaseClient): Promise<Record<string, unknown>> {
   const { data, error } = await client.rpc("export_my_data");

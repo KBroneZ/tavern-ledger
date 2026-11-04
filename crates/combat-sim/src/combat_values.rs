@@ -2,7 +2,7 @@
 //! and Tavern spells with the side's spell upgrades.
 
 use super::{Combat, Dead, Source};
-use crate::cards::{Action, GemTo, Trigger};
+use crate::cards::{lobster_shown, Action, GemTo, Trigger, LOBSTER_STEP};
 use crate::model::Tribes;
 
 /// Eternal Knight and its golden card, with what each Knight that died this
@@ -25,14 +25,51 @@ impl Combat<'_> {
             out.0 = out.0.saturating_add(v.undead_attack);
         }
         if let Some((_, a, h)) = KNIGHTS.iter().find(|(id, ..)| *id == info.id) {
+            let (ka, kh) = self.kit_counts[side].knight_gain;
             out.0 = out.0.saturating_add(a.saturating_mul(v.knights_dead));
             out.1 = out.1.saturating_add(h.saturating_mul(v.knights_dead));
+            out = (out.0.saturating_add(ka), out.1.saturating_add(kh));
         }
         if BEETLES.contains(&info.id.as_str()) {
             out.0 = out.0.saturating_add(v.beetle.0);
             out.1 = out.1.saturating_add(v.beetle.1);
         }
+        if info.tribes.is(Tribes::BEAST) {
+            out.0 = out.0.saturating_add(self.sides[side].beast_attack);
+        }
         out
+    }
+
+    /// On a board taken after the start of combat the Beasts there already
+    /// show what each Humming Bird gave; the Beasts summoned later still get
+    /// it (T-645).
+    pub(super) fn beast_attack_on_board(&self, side: usize) -> i32 {
+        self.sides[side]
+            .units
+            .iter()
+            .flat_map(|u| self.triggers(u))
+            .filter_map(|t| match t {
+                Trigger::StartOfCombat(actions) => Some(*actions),
+                _ => None,
+            })
+            .flatten()
+            .map(|a| match a {
+                Action::BeastAttackThisCombat(n) => *n,
+                _ => 0,
+            })
+            .fold(0, i32::saturating_add)
+    }
+
+    /// Each side's Lobster buff from the first Lobster on its board that
+    /// shows it, else the text's (T-645).
+    pub(super) fn lobster_values(&mut self, sides: [bool; 2]) {
+        for side in [0, 1].into_iter().filter(|s| sides[*s]) {
+            let shown = self.sides[side]
+                .units
+                .iter()
+                .find_map(|u| lobster_shown(&self.p.cards[u.card as usize].id, u.counters));
+            self.sides[side].lobster = shown.unwrap_or(LOBSTER_STEP);
+        }
     }
 
     /// How many times over a Dragon gains stats: twice for each neighbour
@@ -84,6 +121,20 @@ impl Combat<'_> {
                 self.buff(d.side, uid, a, h);
             }
         }
+    }
+
+    /// The uids of the side's living Eternal Knights.
+    pub(super) fn knights(&self, side: usize) -> Vec<u32> {
+        self.sides[side]
+            .units
+            .iter()
+            .filter(|u| u.alive())
+            .filter(|u| {
+                let id = self.p.cards[u.card as usize].id.as_str();
+                KNIGHTS.iter().any(|(k, ..)| *k == id)
+            })
+            .map(|u| u.uid)
+            .collect()
     }
 
     /// What `count` Blood Gems give on `side`: +1/+1 each plus its upgrades.

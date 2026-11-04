@@ -15,7 +15,7 @@ const LEFT_MOST: &str =
     "which Deathrattle it triggers and when is not checked against the game yet";
 const GEM_CHAIN: &str = "Blood Gems played on it in combat are not passed on";
 pub(crate) const KNIGHTS: &str =
-    "Eternal Knights grow with the Knights that died this game, which the log does not show";
+    "Eternal Knights grow with the Knights that died this game, which is not known";
 
 /// "Give your minions +3/+2. Repeat for your Dragons. Repeat for your
 /// minions with Divine Shield." (Mighty Dragonbreath, cast in combat.)

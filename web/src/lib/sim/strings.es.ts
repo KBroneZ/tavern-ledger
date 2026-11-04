@@ -3,6 +3,7 @@ import type { SimStringKey } from "./strings.ts";
 
 export const ES: Record<SimStringKey, string> = {
   "page.title": "Simulador de combates",
+  "meta.title": "Simulador de combates de Campos de Batalla",
   "page.description": "Prueba un combate de Campos de Batalla: carga una ronda de una de tus partidas o monta los tableros, y mira las probabilidades.",
   "page.kicker": "Prueba un combate",
   "page.lead": "Elige una de tus partidas, elige un combate y mira las probabilidades. O pon tú los esbirros de los dos lados.",
@@ -43,6 +44,7 @@ export const ES: Record<SimStringKey, string> = {
   "board.addSecond": "Añadir un segundo tablero",
   "board.remove": "Quitar este tablero",
   "board.full": "Un tablero admite 7 esbirros.",
+  "board.leftOut": "Este tablero no tiene esbirros, así que se deja fuera: su poder de héroe y sus abalorios no se juegan. Añade un esbirro para usarlos.",
 
   "tier.label": "Nivel de taberna",
   "tier.unknown": "?",

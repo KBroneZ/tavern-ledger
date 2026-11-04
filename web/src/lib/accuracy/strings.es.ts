@@ -7,6 +7,8 @@ export const ES: Record<AccKey, string> = {
   "page.intro":
     "El simulador que da las probabilidades del overlay, comprobado con combates reales: para cada combate da la probabilidad de victoria, de empate y de derrota, y el registro del juego dice qué pasó de verdad.",
   "page.version": "Motor {version} · medido el {date} · {trials} pruebas por combate",
+  "page.calibration": "El puesto esperado tiene su propia comprobación:",
+  "page.calibration.link": "Calibración del puesto esperado",
 
   "mode.solo": "Solo",
   "mode.duos": "Dúos",
@@ -21,8 +23,8 @@ export const ES: Record<AccKey, string> = {
   "tile.refused": "Rechazados por la comprobación del tablero",
 
   "right.backing": "{right} de {scored} combates",
-  "blocked.some": "Sin probabilidades en el {share} de los combates de {mode} ({blocked} de {total}): una carta no está modelada.",
-  "blocked.none": "Probabilidades en todos los combates de {mode} con resultado ({total}): no faltaba ninguna carta.",
+  "blocked.some": "Sin probabilidades en el {share} de los combates de {mode} ({blocked} de {total}): una carta, un poder de héroe o un abalorio no está modelado.",
+  "blocked.none": "Probabilidades en todos los combates de {mode} con resultado ({total}): no faltaba nada.",
   "blocked.empty": "Aún no hay combates de {mode} con resultado.",
 
   "cal.title": "Previsto y real",
@@ -31,7 +33,8 @@ export const ES: Record<AccKey, string> = {
   "cal.key.said": "Previsto",
   "cal.key.happened": "Lo que pasó",
   "cal.none": "sin predicciones",
-  "cal.mark": "Previsto {range}: {predictions} predicciones, {said} de media; pasó {happened}",
+  "cal.mark.one": "Previsto {range}: {predictions} predicción, {said} de media; pasó {happened}",
+  "cal.mark.other": "Previsto {range}: {predictions} predicciones, {said} de media; pasó {happened}",
   "cal.table": "Ver como tabla",
   "cal.col.range": "Previsto",
   "cal.col.predictions": "Predicciones",
@@ -82,6 +85,9 @@ export const ES: Record<AccKey, string> = {
   "builds.none": "Aún no se ha leído ninguna versión del juego.",
   "builds.col.build": "Versión",
   "builds.col.games": "Partidas",
+  "builds.col.proven": "Cartas probadas",
+  "builds.col.text": "Solo por su texto",
+  "builds.proven": "Una carta está probada en una versión cuando el simulador repitió con ella un combate real, ataque a ataque, como lo jugó la partida, hasta el final. Las demás cartas que conoce el simulador se juegan solo por su texto.",
   "builds.row.one": "{count} partida",
   "builds.row.other": "{count} partidas",
 
@@ -96,6 +102,10 @@ export const ES: Record<AccKey, string> = {
 
   "about.title": "Qué se mide y sus límites",
   "about.body": "Solo los combates de quien hace Tavern Ledger, de sus propias partidas, con los tableros tal como entraron en cada combate (el primer ataque). Pocas cifras y un solo jugador: una orientación, no una promesa.",
-  "about.more": "Los efectos de inicio de combate están desactivados, como en el overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades.",
+  "about.more": "Los efectos de inicio de combate no se repiten: los tableros son los del primer ataque, como en las probabilidades finales del overlay. Un combate cuenta como puntuado cuando el simulador pudo jugarlo, y al lado siempre se muestra el porcentaje de combates sin probabilidades.",
+  "about.kits":
+    "Las partidas guardadas o releídas por la app 0.2.5 o posterior también guardan los poderes de héroe y abalorios de cada héroe, y sus combates se juegan con ellos: {combats} combates aquí.",
+  "about.kits.scores": "En los {scored} con probabilidades de las dos formas, Brier {with} con los poderes y abalorios, {without} sin ellos.",
+  "about.kits.none": "Aún no hay aquí ninguna partida guardada o releída con los poderes de héroe y abalorios (app 0.2.5 o posterior), así que las probabilidades los dejan fuera.",
   "about.refresh": "Estas cifras se actualizan después de cada ronda de cartas nuevas.",
 };

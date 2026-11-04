@@ -28,11 +28,16 @@ mod cards_round7;
 mod cards_round8;
 mod cards_round8_pool;
 pub mod combat;
+#[cfg(feature = "harness")]
+pub mod conformance;
+#[cfg(feature = "harness")]
+pub mod corpus;
 pub mod gifts;
 pub mod kit;
 pub mod kit_effects;
 mod kit_lists;
 pub mod kit_passive;
+mod kit_pool;
 pub mod model;
 pub mod rng;
 pub mod trials;
@@ -46,9 +51,13 @@ pub mod harness_export;
 #[cfg(feature = "harness")]
 pub mod harness_games;
 #[cfg(feature = "harness")]
+pub mod harness_kits;
+#[cfg(feature = "harness")]
 pub mod harness_logs;
 #[cfg(feature = "harness")]
 pub mod harness_misses;
+#[cfg(feature = "harness")]
+pub mod harness_proven;
 #[cfg(feature = "harness")]
 pub mod harness_saved;
 #[cfg(feature = "harness")]

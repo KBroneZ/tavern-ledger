@@ -17,6 +17,7 @@ import { MAX_GIFTS, MAX_MINIONS, MAX_STAT, MAX_TIER, SIM_KEYWORDS, type Side, ty
 import type { KitLists } from "./cardFile.ts";
 import type { CardIndex, SimCard } from "./cards.ts";
 import { NO_KIT_LISTS } from "../game/names.ts";
+import { kitCards } from "./kit.ts";
 import { type Holding, kitView } from "./kitView.ts";
 import { reasonText } from "./reasons.ts";
 import { sm } from "./strings.ts";
@@ -359,6 +360,10 @@ function boardView(side: Side, index: number, props: EditorProps): VNode {
       duos && index === 1 ? h("button", { type: "button", class: "sim-btn sim-btn-quiet", "data-act": "board-remove", ...where(side, index) }, sm("board.remove")) : null,
     ),
     kitView(side, index, { state, cards: props.cards, lists: props.lists ?? NO_KIT_LISTS, marks: props.marks, holding: props.holding ?? null }),
+    // The request leaves an empty second board out (B.toRequest), so what is set on it is not played.
+    duos && index === 1 && b.minions.length === 0 && kitCards(b.kit ?? null).length > 0
+      ? h("p", { class: "sim-dim sim-board-left-out" }, sm("board.leftOut"))
+      : null,
     h(
       "ul",
       { class: "sim-row", role: "list", "aria-label": title },

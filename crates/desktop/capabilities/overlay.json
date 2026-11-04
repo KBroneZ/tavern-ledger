@@ -21,6 +21,7 @@
     "allow-overlay-save-leaderboard",
     "allow-overlay-reset-leaderboard",
     "allow-card-names",
+    "allow-hero-groups",
     "allow-card-data-status",
     "allow-texture-set",
     "allow-app-settings",

@@ -5,7 +5,7 @@
 
 use crate::cards::Fidelity;
 use crate::cards_round1::BLOOD_GEM;
-use crate::kit::{BEETLES_PLACE, SCALE_ON_SHIELDED, SPROUT_REBORN, STAFF_PICK};
+use crate::kit::{BEETLES_PLACE, KNIGHTS_SUMMONED, SCALE_ON_SHIELDED, SPROUT_REBORN, STAFF_PICK};
 use crate::model::{Keywords, Tribes};
 
 /// Something a hero power or trinket does during combat.
@@ -41,6 +41,12 @@ pub enum KitTrigger {
         tribe: Tribes,
         keyword: Keywords,
     },
+    /// After a friendly Undead dies, the side's Eternal Knights have
+    /// `attack`/`health` more this game: those on the board gain it, and
+    /// those summoned later in the combat come with it.
+    UndeadDeathBuffsKnights { attack: i32, health: i32 },
+    /// Avenge (`n`): every friendly minion gains `attack`/`health`.
+    AvengeBuffAll { n: u32, attack: i32, health: i32 },
     /// Avenge (`n`): summon `count` tokens at the right end, with
     /// `keywords`.
     AvengeSummon {
@@ -149,6 +155,49 @@ pub const PASSIVE: &[(&str, KitPassive)] = &[
                 keyword: Keywords::REBORN,
             },
         ),
+    ),
+    // Eternal Portrait (the user's logs, 32 blocks: after each friendly
+    // Undead died, every friendly Eternal Knight, golden or not, gained
+    // exactly +4/+2).
+    (
+        "BG36_MagicItem_216",
+        approx(
+            KNIGHTS_SUMMONED,
+            KitTrigger::UndeadDeathBuffsKnights {
+                attack: 4,
+                health: 2,
+            },
+        ),
+    ),
+    // Beetle Band (lesser).
+    (
+        "BG32_MagicItem_860",
+        approx(
+            BEETLES_PLACE,
+            KitTrigger::AvengeSummon {
+                n: 5,
+                token: "BG28_603t",
+                count: 1,
+                keywords: Keywords::TAUNT,
+            },
+        ),
+    ),
+    // Bird Feeder (lesser and greater).
+    (
+        "BG32_MagicItem_864",
+        exact(KitTrigger::AvengeBuffAll {
+            n: 2,
+            attack: 1,
+            health: 1,
+        }),
+    ),
+    (
+        "BG32_MagicItem_864t",
+        exact(KitTrigger::AvengeBuffAll {
+            n: 2,
+            attack: 4,
+            health: 4,
+        }),
     ),
     // Beetle Band.
     (

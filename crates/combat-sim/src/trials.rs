@@ -9,7 +9,7 @@ use crate::gifts;
 use crate::kit::{self, KitEffect};
 use crate::kit_effects;
 use crate::kit_passive;
-use crate::model::{BoardError, GameValues, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
+use crate::model::{BoardError, Keywords, Kit, KitCard, Minion, Team, Tribes, Warband};
 use crate::rng::Rng;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -97,9 +97,9 @@ impl Coverage {
             b.minions
                 .iter()
                 .chain(held_minions(b, start_of_combat))
-                .map(move |m| (m, &b.values, *mate))
+                .map(move |m| (m, *b, *mate))
         });
-        for (m, values, mate) in minions {
+        for (m, band, mate) in minions {
             let id = &m.card_id;
             match cards::rules(id) {
                 None => push_unique(&mut cov.not_modelled, id.clone()),
@@ -123,7 +123,7 @@ impl Coverage {
                     }
                     if let Fidelity::Approximate(why) = rules.fidelity {
                         let unplayed = !start_of_combat && gap_at_start_only(why, &rules);
-                        if !played_with(why, values)
+                        if !played_with(why, band)
                             && !unplayed
                             && !cov.approximate.iter().any(|(c, _)| c == id)
                         {
@@ -141,7 +141,7 @@ impl Coverage {
         }
         for (band, mate) in boards {
             if let Some(kit) = &band.kit {
-                cov.add_kit(kit, start_of_combat, *mate, &band.values);
+                cov.add_kit(kit, start_of_combat, *mate, band);
             }
         }
         for (band, _) in boards {
@@ -204,35 +204,27 @@ impl Coverage {
         kit: &Kit,
         start_of_combat: bool,
         mate: Option<&Warband>,
-        values: &GameValues,
+        band: &Warband,
     ) {
         let power_in_combat = kit.powers.iter().any(|p| kit::acts_in_combat(&p.card_id));
         for card in kit.cards() {
             let id = &card.card_id;
             let effect = kit::effect(id);
-            let play = kit_effects::played(id).filter(|_| start_of_combat);
-            if let Some(play) = play {
-                if let Some(why) = unmet(play, card, kit.round, mate) {
-                    self.refuse(id, why);
-                    push_unique(&mut self.kit, id.clone());
-                    continue;
-                }
-                if kit_effects::acts(play, &card.counters, kit.round) == Some(false) {
-                    continue;
-                }
-                let why = match play.fidelity {
-                    Fidelity::Approximate(why) => Some(why),
-                    Fidelity::Exact => None,
-                };
-                let why = why.or_else(|| {
-                    kit_effects::counter_missing(play, &card.counters)
-                        .then_some(kit::COUNTER_NOT_GIVEN)
-                });
-                if let Some(why) = why {
-                    if !self.approximate.iter().any(|(c, _)| c == id) {
-                        self.approximate.push((id.clone(), why));
-                    }
-                }
+            let play = kit_effects::played(id);
+            if let Some(mark) = play
+                .and_then(kit_effects::mark)
+                .filter(|_| !start_of_combat)
+            {
+                self.add_marked(id, mark, band);
+                continue;
+            }
+            if let Some(play) = play.filter(|_| start_of_combat) {
+                self.add_played_at_start(play, card, kit.round, mate);
+                continue;
+            }
+            if effect == Some(KitEffect::InCombatBlocks) {
+                self.refuse(id, kit::IN_COMBAT_BLOCKED);
+                push_unique(&mut self.kit, id.clone());
                 continue;
             }
             let refuse = match effect {
@@ -252,8 +244,8 @@ impl Coverage {
                 kit_passive::passive(id).filter(|p| start_of_combat || !p.before_start_only);
             if let Some(p) = passive {
                 if let Fidelity::Approximate(why) = p.fidelity {
-                    if !played_with(why, values) && !self.approximate.iter().any(|(c, _)| c == id) {
-                        self.approximate.push((id.clone(), why));
+                    if !played_with(why, band) {
+                        self.approximate_once(id, why);
                     }
                 }
                 continue;
@@ -266,10 +258,59 @@ impl Coverage {
                 _ => None,
             };
             if let Some(why) = gap {
-                if !self.approximate.iter().any(|(c, _)| c == id) {
-                    self.approximate.push((id.clone(), why));
-                }
+                self.approximate_once(id, why);
             }
+        }
+    }
+
+    /// A card whose start of combat marks a minion, on a board taken after
+    /// it (T-631): the mark shows which minion it chose; without the mark
+    /// the card's effect is unknown and the odds are blocked.
+    fn add_marked(&mut self, id: &str, mark: &str, band: &Warband) {
+        let shown = band
+            .minions
+            .iter()
+            .any(|m| m.gifts.iter().any(|g| g == mark));
+        if !shown {
+            self.refuse(id, kit::MARK_NOT_GIVEN);
+            push_unique(&mut self.kit, id.to_string());
+        }
+    }
+
+    /// A card the engine plays at the start of combat, with start of combat
+    /// played: blocked when what it needs is not given, else its own gap.
+    fn add_played_at_start(
+        &mut self,
+        play: &kit_effects::KitPlay,
+        card: &KitCard,
+        round: Option<u32>,
+        mate: Option<&Warband>,
+    ) {
+        let id = &card.card_id;
+        if let Some(why) = unmet(play, card, round, mate) {
+            self.refuse(id, why);
+            push_unique(&mut self.kit, id.clone());
+            return;
+        }
+        if kit_effects::acts(play, &card.counters, round) == Some(false) {
+            return;
+        }
+        let why = match play.fidelity {
+            Fidelity::Approximate(why) => Some(why),
+            Fidelity::Exact => None,
+        };
+        let why = why.or_else(|| {
+            kit_effects::counter_missing(play, &card.counters).then_some(kit::COUNTER_NOT_GIVEN)
+        });
+        if let Some(why) = why {
+            self.approximate_once(id, why);
+        }
+    }
+
+    /// Names `id` approximate for `why`, once.
+    fn approximate_once(&mut self, id: &str, why: &'static str) {
+        if !self.approximate.iter().any(|(c, _)| c == id) {
+            self.approximate.push((id.to_string(), why));
         }
     }
 
@@ -421,12 +462,22 @@ const GIFT_NOT_REVIEWED: &str = "the simulator has not reviewed this Dark Gift y
 /// True when the card's only gap is a game-long value its board brings
 /// (T-610): Blood Gem or Tavern spell upgrades above zero. Zero is unknown
 /// (a board without values), so the card stays approximate then.
-fn played_with(why: &str, values: &GameValues) -> bool {
+fn played_with(why: &str, band: &Warband) -> bool {
+    let values = &band.values;
     match why {
         w if w == crate::cards_round1::BLOOD_GEM => values.blood_gem != (0, 0),
         w if w == crate::cards_round2::SPELL => values.spell != (0, 0),
+        w if w == crate::cards_round1::DEITY => values.deity.known(),
+        w if w == crate::cards_round1::LOBSTER => lobster_known(band),
         _ => false,
     }
+}
+
+/// Whether a Lobster on the board shows the side's Lobster buff (T-645).
+pub(crate) fn lobster_known(band: &Warband) -> bool {
+    band.minions
+        .iter()
+        .any(|m| cards::lobster_shown(&m.card_id, m.counters).is_some())
 }
 
 /// True when the card's gap is about how it plays its start of combat and

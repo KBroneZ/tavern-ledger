@@ -38,11 +38,12 @@ import contract from "./report_keys.json" with { type: "json" };
  * T-610, D-122; 10: each replay's beats, damage sources and keyword events,
  * parser revision 13, T-575; 11: buffs on board and replay minions, parser
  * revision 14, T-619, D-142; 12: each board's hero powers and trinkets and
- * replay minions' two numbers, parser revision 16, T-628, D-157). Every
+ * replay minions' two numbers, parser revision 16, T-628, D-157; 13: each
+ * board's Deity, parser revision 17, T-671). Every
  * answer carries it, and the desktop app retries a game this server refused
  * once when it sees a higher number (D-047).
  */
-export const VALIDATOR_VERSION = 12;
+export const VALIDATOR_VERSION = 13;
 
 export const SESSION_PATTERN = /^Hearthstone_(\d{4})_(\d{2})_(\d{2})_\d{2}_\d{2}_\d{2}$/;
 const PATH_PATTERN = /\/v1\/games\/(Hearthstone_\d{4}(?:_\d{2}){5})\/([1-9][0-9]{0,3})$/;
@@ -230,6 +231,11 @@ const KEYS: Record<string, string[]> = {
     "undead_atk",
     "beetle_atk",
     "beetle_health",
+    "deity_dbf",
+    "deity_atk",
+    "deity_health",
+    "deity_needed",
+    "deity_progress",
   ],
   "report.rounds[].entries[].board[]": [
     "card_id",
@@ -426,8 +432,9 @@ function held(v: unknown, field: string): void {
 }
 
 /**
- * A board's game-long values (parser revision 10, T-610, D-122): whole
- * numbers from 1 to MAX_GAME_VALUE by the parser's names; zero is left out,
+ * A board's game-long values (parser revision 10, T-610, D-122; the Deity
+ * since revision 17, T-671): whole numbers from 1 to MAX_GAME_VALUE by the
+ * parser's names (the Deity's database id up to MAX_DBF_ID); zero is left out,
  * so an empty object is never written.
  */
 function gameValues(v: unknown, field: string): void {
@@ -435,7 +442,9 @@ function gameValues(v: unknown, field: string): void {
   const o = shape(v, field, names);
   const keys = Object.keys(o);
   if (keys.length === 0) throw new Invalid(field);
-  for (const key of keys) int(o[key], `${field}.${key}`, 1, MAX_GAME_VALUE);
+  for (const key of keys) {
+    int(o[key], `${field}.${key}`, 1, key === "deity_dbf" ? MAX_DBF_ID : MAX_GAME_VALUE);
+  }
 }
 
 function round(v: unknown, field: string, seen: Seen): Obj {

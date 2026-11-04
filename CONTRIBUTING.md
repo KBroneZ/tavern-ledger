@@ -40,6 +40,10 @@ These are the project's rules and are not negotiable in a pull request:
 4. Commit messages follow `type: description`, with `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf` or `ci`.
 5. Open a pull request against `main` and fill in the template. CI must be green before it can be merged.
 
+## A card the simulator plays wrong
+
+[docs/implementing-a-card.md](docs/implementing-a-card.md) shows where a card's rules live, how to add or fix one from its text, and how to check it against your own logged combats.
+
 ## Questions
 
 Ask in an issue, or write to contact@tavernledger.net.

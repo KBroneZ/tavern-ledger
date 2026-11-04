@@ -39,6 +39,10 @@ pub enum ReaderStatus {
     /// The game's structure or a check did not match; the app falls back to
     /// its log-based values.
     UnsupportedVersion,
+    /// The game screen opened with no Battlegrounds lobby before it (the
+    /// client restarted inside the game: a reconnect). The tribes are not
+    /// read for that game, and nothing about the game version is claimed.
+    NoLobby,
     NotRunning,
     /// Windows refused read access (the game runs with more rights than
     /// the app). Never retried with more rights.

@@ -5,7 +5,9 @@
 
 pub mod choices;
 pub mod client_build;
+pub mod counterfactual;
 pub mod damage;
+pub mod decisions;
 pub mod dev_reconnect;
 pub mod discover;
 pub mod game_clock;
@@ -21,6 +23,7 @@ pub mod lobby_tribes;
 pub mod lock;
 pub mod odds;
 pub mod odds_duos;
+pub mod period_summary;
 pub mod playback;
 pub mod possible;
 pub mod provenance;
@@ -339,6 +342,13 @@ impl Watcher {
             .is_none()
             .then(|| self.scene.now())
             .flatten()
+    }
+
+    /// The game screen was opened without the Battlegrounds lobby before it,
+    /// as when the client restarts inside a game (a reconnect). False when
+    /// the scene is unknown (`LoadingScreen.log` off or unreadable).
+    pub fn game_without_lobby(&self) -> bool {
+        self.scene_error.is_none() && self.scene.game_from_lobby() == Some(false)
     }
 
     /// The player left the game screen: a game the log still has open was

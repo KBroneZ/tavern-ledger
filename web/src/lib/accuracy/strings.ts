@@ -10,6 +10,8 @@ export const ACC_STRINGS = {
   "page.intro":
     "The simulator behind the overlay's odds, checked on real combats: for each combat it gives the chance of a win, a tie and a loss, and the game's log says what really happened.",
   "page.version": "Engine {version} · measured {date} · {trials} trials per combat",
+  "page.calibration": "The expected place has its own check:",
+  "page.calibration.link": "Expected place calibration",
 
   "mode.solo": "Solo",
   "mode.duos": "Duos",
@@ -24,8 +26,8 @@ export const ACC_STRINGS = {
   "tile.refused": "Refused by the board check",
 
   "right.backing": "{right} of {scored} combats",
-  "blocked.some": "No odds in {share} of {mode} combats ({blocked} of {total}): a card is not modelled.",
-  "blocked.none": "Odds in every {mode} combat with a result ({total}): no card was missing.",
+  "blocked.some": "No odds in {share} of {mode} combats ({blocked} of {total}): a card, hero power or trinket is not modelled.",
+  "blocked.none": "Odds in every {mode} combat with a result ({total}): nothing was missing.",
   "blocked.empty": "No {mode} combats with a result yet.",
 
   "cal.title": "Predicted and real",
@@ -34,7 +36,8 @@ export const ACC_STRINGS = {
   "cal.key.said": "Predicted",
   "cal.key.happened": "Real",
   "cal.none": "no predictions",
-  "cal.mark": "Predicted {range}: {predictions} predictions, {said} on average, real {happened}",
+  "cal.mark.one": "Predicted {range}: {predictions} prediction, {said} on average, real {happened}",
+  "cal.mark.other": "Predicted {range}: {predictions} predictions, {said} on average, real {happened}",
   "cal.table": "Show as a table",
   "cal.col.range": "Predicted",
   "cal.col.predictions": "Predictions",
@@ -85,6 +88,9 @@ export const ACC_STRINGS = {
   "builds.none": "No game version has been read yet.",
   "builds.col.build": "Build",
   "builds.col.games": "Games",
+  "builds.col.proven": "Cards proven",
+  "builds.col.text": "From text only",
+  "builds.proven": "A card is proven on a build when the simulator replayed a real combat with it, attack by attack, as the game played it, to the end. The other cards the simulator knows play from their card text only.",
   "builds.row.one": "{count} game",
   "builds.row.other": "{count} games",
 
@@ -99,7 +105,11 @@ export const ACC_STRINGS = {
 
   "about.title": "What is measured, and its limits",
   "about.body": "Only the combats of the person who builds Tavern Ledger, from their own games, with the boards as they entered each combat (the first attack). Small numbers, one player: a guide, not a promise.",
-  "about.more": "Start of combat effects are off, as in the overlay. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it.",
+  "about.more": "Start of combat effects are not replayed: the boards are the ones at the first attack, as in the overlay's final odds. A combat counts as scored when the simulator could play it; the share of combats with no odds is always shown beside it.",
+  "about.kits":
+    "Games saved or re-read by app 0.2.5 or later also keep each hero's powers and trinkets, and their combats are played with them: {combats} combats here.",
+  "about.kits.scores": "On the {scored} of them with odds both ways: Brier {with} with the powers and trinkets, {without} without.",
+  "about.kits.none": "No game here was saved or re-read with the heroes' powers and trinkets yet (app 0.2.5 or later), so the odds leave them out.",
   "about.refresh": "These numbers are refreshed after each round of new cards.",
 } as const;
 

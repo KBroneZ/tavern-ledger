@@ -123,21 +123,18 @@ class BackupCryptoTest(unittest.TestCase):
         self.assertNotEqual(res.returncode, 0)
 
     def test_retention_deletes_only_expired_backups(self):
-        out, legacy = self.out, self.tmp / "legacy"
+        out = self.out
         out.mkdir()
-        legacy.mkdir()
         old, new = "tl-backups-20200101-000000.tlenc", "tl-backups-29991231-000000.tlenc"
         keep = ["other.tlenc", "tl-backups-x.txt", "tl-backups-20200101-000000.txt",
                 "tl-backups-20261399-000000.tlenc", new]
         for name in [old] + keep:
             (out / name).write_bytes(b"x")
-        (legacy / "20200101-000000").mkdir()
-        (legacy / "29991231-000000").mkdir()
-        (legacy / "notes").mkdir()
-        res = pwsh(f". '{CRYPTO}'; Remove-ExpiredBackups '{out}' '{legacy}' 35")
+        (out / "20200101-000000").mkdir()
+        keep.append("20200101-000000")
+        res = pwsh(f". '{CRYPTO}'; Remove-ExpiredBackups '{out}' 35")
         self.assertEqual(res.returncode, 0, res.stderr)
         self.assertEqual(sorted(p.name for p in out.iterdir()), sorted(keep))
-        self.assertEqual(sorted(p.name for p in legacy.iterdir()), ["29991231-000000", "notes"])
 
     def test_script_takes_no_passphrase_parameter_and_stays_out_of_the_repo(self):
         code = SCRIPT.read_text(encoding="utf-8").split("#>", 1)[1]

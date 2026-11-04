@@ -17,3 +17,7 @@ f138038fa6510f768c26d37b6dd4d211f199178f:supabase/functions/upload-game/handler.
 # Made-up test value (a random game id) in a branch commit of the opaque game names change;
 # the file now reads it from the row. Not a real key.
 61714ff53b7586154f328cf1aca397fe8ee9345f:web/test/unit/simView.test.ts:generic-api-key:149
+
+# Synthetic test input (a made-up token in a log.config line of the diagnostics tests), in a
+# branch commit; the tests now build it from two parts at run time. Not a real key.
+b42c676728ac72197065f01cdff69e3417b054fb:crates/desktop/src/diagnostics_tests.rs:generic-api-key:100

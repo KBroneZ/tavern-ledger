@@ -43,7 +43,8 @@ A pull request that changes `plugins.updater.pubkey` fails the `repo` job of CI 
 
 ## 5. After publishing
 
-- [ ] `python tools/release.py facts vX.Y.Z` records the published files' sizes and SHA-256 from GitHub into `web/src/lib/site/releases.json`; commit it in a pull request (the download page and the home page's button follow it).
+- [ ] `python tools/release.py facts vX.Y.Z` records the published files' sizes and SHA-256 from GitHub into `web/src/lib/site/releases.json`; commit it in a pull request (the download page and the home page's button follow it). In the same pull request, `python tools/winget_manifest.py` writes the winget manifests for the new version ([`packaging/winget/`](../../packaging/winget/README.md)); a test fails until they match the record.
+- [ ] Once the package is listed in winget, the repository owner submits the new version's folder (see [`packaging/winget/README.md`](../../packaging/winget/README.md)).
 - [ ] The download page's "Updating" words say that the app updates itself (from the first self-updating release on).
 - [ ] The next daily **Release files** run ([`.github/workflows/release-check.yml`](../../.github/workflows/release-check.yml)) is green. It is a best-effort check: GitHub can skip scheduled runs and turns schedules off in a repository with no activity for 60 days, so look at its runs now and then and turn it back on if needed.
 - [ ] An app on the previous version shows "Version X.Y.Z is ready" within a minute of starting (or after "Check now"), and updates when "Restart now" is pressed.

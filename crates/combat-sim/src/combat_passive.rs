@@ -2,7 +2,7 @@
 //! [`crate::kit_passive`] plays, hooked to kills, attacks, deaths and
 //! summons of the board each hero's powers and trinkets belong to.
 
-use super::{Combat, Source, Unit};
+use super::{Combat, Dead, Source, Unit};
 use crate::cards::Trigger;
 use crate::kit_passive::KitTrigger;
 use crate::model::Tribes;
@@ -19,6 +19,8 @@ pub(crate) struct KitCounts {
     first_deathrattle: bool,
     /// Times each limited one acted, by its index among the board's.
     uses: Vec<u32>,
+    /// What the side's Eternal Knights gained this combat (Attack, Health).
+    pub(super) knight_gain: (i32, i32),
 }
 
 impl Combat<'_> {
@@ -131,6 +133,39 @@ impl Combat<'_> {
         has
     }
 
+    /// Minions died: on each side, every friendly Undead among them makes
+    /// the side's Eternal Knights grow (Eternal Portrait).
+    pub(super) fn kit_undead_died(&mut self, dead: &[Dead]) {
+        for side in [0, 1] {
+            let gains: Vec<(i32, i32)> = self
+                .passives_now(side)
+                .iter()
+                .filter_map(|t| match *t {
+                    KitTrigger::UndeadDeathBuffsKnights { attack, health } => {
+                        Some((attack, health))
+                    }
+                    _ => None,
+                })
+                .collect();
+            if gains.is_empty() {
+                continue;
+            }
+            let undead = dead
+                .iter()
+                .filter(|d| d.side == side && self.tribes(&d.unit).is(Tribes::UNDEAD))
+                .count();
+            for _ in 0..undead {
+                for &(attack, health) in &gains {
+                    let gain = &mut self.kit_counts[side].knight_gain;
+                    *gain = (gain.0.saturating_add(attack), gain.1.saturating_add(health));
+                    for uid in self.knights(side) {
+                        self.buff(side, uid, attack, health);
+                    }
+                }
+            }
+        }
+    }
+
     /// A friendly minion of `side` died: the powers' and trinkets' Avenge.
     pub(super) fn kit_avenge(&mut self, side: usize) {
         if self.passives_now(side).is_empty() {
@@ -153,6 +188,13 @@ impl Combat<'_> {
                         if let Some(u) = self.unit_mut(side, uid) {
                             u.kw = u.kw.union(keyword);
                         }
+                    }
+                }
+                KitTrigger::AvengeBuffAll { n, attack, health }
+                    if n > 0 && deaths.is_multiple_of(n) =>
+                {
+                    for uid in self.friends(side, Tribes::NONE, None) {
+                        self.buff(side, uid, attack, health);
                     }
                 }
                 KitTrigger::AvengeSummon {

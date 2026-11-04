@@ -908,6 +908,43 @@ html:not([data-detail="advanced"]) .rp-stepper {
   }
 }
 
+/* A phone, or any touch screen: every control and step is a 44px target (T-551).
+   The minions are display tokens, not controls: seven a side is at most about
+   28px wide at 320px, which WCAG 2.5.8 (24px) allows; the tap that opens a
+   minion's plaque has the plaque's own words in the step list too. */
+@media (max-width: 720px), (pointer: coarse) {
+  .rp-chip {
+    min-height: 44px;
+    padding-inline: var(--s-4);
+  }
+
+  .rp-controls {
+    gap: var(--s-2);
+  }
+
+  .rp-speed select {
+    min-width: 5rem;
+    min-height: 44px;
+  }
+
+  .rp .rp-step {
+    min-height: 44px;
+    padding-block: var(--s-2);
+  }
+
+  .rp-steps > summary {
+    min-height: 44px;
+  }
+}
+
+/* The four buttons of the player and a 6.5rem Play fit one row at 320px. */
+@media (max-width: 480px) {
+  .rp-btn.rp-play {
+    flex: 1 1 6.5rem;
+    min-width: 6.5rem;
+  }
+}
+
 /* A step drawn without moving on (a jump, a step back, another combat) shows
    its marks as they are, without their animations (replayPlayer.ts). */
 .rp-stage.is-still :is(*, *::before, *::after) {

@@ -342,6 +342,7 @@ fn a_kind_outside_the_enabled_list_never_appears() {
             knights_dead: 4,
             undead_attack: 5,
             beetle: (6, 6),
+            ..CombatValues::default()
         },
         shop_elemental: (7, 7),
     };

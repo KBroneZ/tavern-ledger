@@ -5,7 +5,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 7508,
         "new_build": null,
         "stalled": 0,
@@ -106,7 +106,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
@@ -260,7 +260,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 2593,
         "new_build": null,
         "stalled": 0,
@@ -361,16 +361,16 @@
         "approximate": [
           {
             "card_id": "BG33_430",
-            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+            "reason": "Blood Gems are played as +1/+1; their upgrades are not known"
           },
           {
             "card_id": "BG33_886",
-            "reason": "Blood Gems are played as +1/+1; upgrades are not in the log"
+            "reason": "Blood Gems are played as +1/+1; their upgrades are not known"
           }
         ],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
@@ -475,7 +475,7 @@
         "approximate": [],
         "damage_known": false,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 1275,
         "new_build": null,
         "stalled": 0,
@@ -564,7 +564,7 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "not_modelled": [
           "BG_NOT_A_CARD"
         ],
@@ -625,7 +625,7 @@
     },
     {
       "answer": {
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "missing": [
           "BG_ICC_026t"
         ],
@@ -681,7 +681,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 5609,
         "new_build": null,
         "stalled": 0,
@@ -824,7 +824,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
@@ -940,7 +940,7 @@
           "likely": 6,
           "low": 6
         },
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 0,
         "new_build": null,
         "stalled": 0,
@@ -1059,7 +1059,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 0,
         "new_build": 999999,
         "stalled": 0,
@@ -1123,11 +1123,11 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 10000,
         "new_build": null,
         "stalled": 0,
-        "start_of_combat": false,
+        "start_of_combat": true,
         "status": "odds",
         "taken": {
           "high": 3,
@@ -1214,7 +1214,7 @@
         "approximate": [],
         "damage_known": true,
         "dealt": null,
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 0,
         "new_build": null,
         "stalled": 0,
@@ -1301,7 +1301,7 @@
           "likely": 4,
           "low": 4
         },
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "lost": 0,
         "new_build": null,
         "stalled": 0,
@@ -1432,7 +1432,7 @@
     {
       "answer": {
         "approximate": [],
-        "engine": "0.13.0",
+        "engine": "0.20.0",
         "not_modelled": [
           "TB_BaconShop_HP_103"
         ],

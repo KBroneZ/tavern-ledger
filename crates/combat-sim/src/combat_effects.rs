@@ -2,7 +2,7 @@
 //! damage, summons) and the helpers they share.
 
 use super::{Combat, Source, Unit};
-use crate::cards::{Action, Trigger};
+use crate::cards::{Action, Trigger, LOBSTER_STEP};
 use crate::model::{Keywords, Tribes};
 
 impl Combat<'_> {
@@ -92,6 +92,10 @@ impl Combat<'_> {
                 for uid in self.pick(pool, count) {
                     self.buff(side, uid, attack, health);
                 }
+            }
+            Action::BuffDeity { attack, health } => self.buff_deity(side, attack, health),
+            Action::SummonDeadAberrations { count } => {
+                self.summon_dead_aberrations(side, src, count)
             }
             Action::GainStats { attack, health } => {
                 if let Some(uid) = me {
@@ -219,6 +223,7 @@ impl Combat<'_> {
             Action::GiveOwnStats { attack, health } => {
                 self.give_own_stats(side, src, attack, health)
             }
+            Action::GiveOthersOwnStats => self.give_others_own_stats(side, src),
             Action::MultiplyStats { attack, health } => {
                 if let Some(uid) = me {
                     self.multiply_stats(side, uid, attack, health);
@@ -320,6 +325,37 @@ impl Combat<'_> {
                 if let Some(uid) = me {
                     self.become_teammate_copy(side, uid);
                 }
+            }
+            Action::LobsterBuff { times } => {
+                let (attack, health) = self.sides[side].lobster;
+                let pool = self.friends(side, Tribes::BEAST, me);
+                for uid in self.pick(pool, 1) {
+                    self.buff(
+                        side,
+                        uid,
+                        attack.saturating_mul(times),
+                        health.saturating_mul(times),
+                    );
+                }
+                let s = &mut self.sides[side];
+                s.lobster = (
+                    s.lobster.0.saturating_add(LOBSTER_STEP.0),
+                    s.lobster.1.saturating_add(LOBSTER_STEP.1),
+                );
+            }
+            Action::BeastAttackThisCombat(attack) => {
+                for f in self.friends(side, Tribes::BEAST, None) {
+                    self.buff(side, f, attack, 0);
+                }
+                let s = &mut self.sides[side];
+                s.beast_attack = s.beast_attack.saturating_add(attack);
+            }
+            Action::UndeadAttackThisGame(attack) => {
+                for f in self.friends(side, Tribes::UNDEAD, None) {
+                    self.buff(side, f, attack, 0);
+                }
+                let v = &mut self.sides[side].values;
+                v.undead_attack = v.undead_attack.saturating_add(attack);
             }
             Action::DamageAllOthers(amount) => {
                 let Some(uid) = me else { return };

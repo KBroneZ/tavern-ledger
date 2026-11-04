@@ -81,6 +81,19 @@ pub struct Overlay {
     /// `load` has finished. The main window can ask before the start-up
     /// code has read the settings, and must not take that for "no choice".
     loaded: AtomicBool,
+    /// Everything the overlay draws is hidden (T-614, `hide_all.rs`). Never
+    /// saved: every start begins shown.
+    all_hidden: AtomicBool,
+    /// The hide key could not be taken (another program holds it).
+    hide_key_taken: AtomicBool,
+    /// The window is on screen now (the follow loop's last decision): the
+    /// hide key acts only on what can be seen.
+    window_shown: AtomicBool,
+    hide_item: Mutex<Option<CheckMenuItem<Wry>>>,
+    /// The preview from the tray (T-614, `preview.rs`): example data over the
+    /// desktop. Never saved.
+    preview: AtomicBool,
+    preview_item: Mutex<Option<CheckMenuItem<Wry>>>,
 }
 
 /// What the overlay page needs to draw itself.
@@ -103,6 +116,12 @@ pub struct View {
     warning: Option<String>,
     /// The combat odds are on (T-605).
     odds: bool,
+    /// Everything the overlay draws is hidden (T-614).
+    all_hidden: bool,
+    /// The hide key is not available: the page's note points at the tray.
+    hide_key_taken: bool,
+    /// The preview is open: the page shows its example data.
+    preview: bool,
 }
 
 #[derive(Serialize)]
@@ -192,6 +211,62 @@ impl Overlay {
 
     pub fn unlocked(&self) -> bool {
         self.unlocked.load(Ordering::SeqCst) && !self.broken.load(Ordering::SeqCst)
+    }
+
+    /// Unlocking shows everything again: layout editing hidden would take
+    /// clicks the user cannot see. The flag goes first and the hiding is
+    /// cleared after, so a hide racing with it (`hide_all`) always loses.
+    fn store_unlocked(&self, on: bool) {
+        self.unlocked.store(on, Ordering::SeqCst);
+        if on {
+            self.all_hidden.store(false, Ordering::SeqCst);
+        }
+    }
+
+    pub fn all_hidden(&self) -> bool {
+        self.all_hidden.load(Ordering::SeqCst)
+    }
+
+    /// Hides or shows everything; returns whether it is hidden now. Hiding
+    /// never holds while the layout is unlocked: checked again after the
+    /// store, so an unlock that lands in between wins (`store_unlocked`
+    /// clears it too, whichever comes last).
+    pub fn hide_all(&self, on: bool) -> bool {
+        self.all_hidden.store(on, Ordering::SeqCst);
+        if on && self.unlocked() {
+            self.all_hidden.store(false, Ordering::SeqCst);
+        }
+        self.all_hidden()
+    }
+
+    pub fn hide_key_taken(&self) -> bool {
+        self.hide_key_taken.load(Ordering::SeqCst)
+    }
+
+    pub fn set_hide_key_taken(&self, taken: bool) {
+        self.hide_key_taken.store(taken, Ordering::SeqCst);
+    }
+
+    pub fn window_shown(&self) -> bool {
+        self.window_shown.load(Ordering::SeqCst)
+    }
+
+    pub fn set_window_shown(&self, shown: bool) {
+        self.window_shown.store(shown, Ordering::SeqCst);
+    }
+
+    /// The preview is open, and never for an overlay that is off for this run.
+    pub fn preview(&self) -> bool {
+        self.preview.load(Ordering::SeqCst) && self.preview_allowed()
+    }
+
+    /// An overlay that could not be made click-through stays hidden.
+    pub fn preview_allowed(&self) -> bool {
+        !self.broken.load(Ordering::SeqCst)
+    }
+
+    pub fn set_preview(&self, on: bool) {
+        self.preview.store(on, Ordering::SeqCst);
     }
 
     pub fn ignores_foreground(&self) -> bool {
@@ -340,6 +415,9 @@ impl Overlay {
             vars: settings.theme.css_vars(settings.opacity),
             warning: lock(&self.warning).clone(),
             odds: !settings.odds_off,
+            all_hidden: self.all_hidden(),
+            hide_key_taken: self.hide_key_taken(),
+            preview: self.preview(),
         }
     }
 }
@@ -362,11 +440,21 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         refresh_unlock_item(state);
         return;
     }
+    if unlock_shows_first(on, state.overlay.all_hidden()) {
+        // Unlocking a hidden overlay only shows it, still click-through: the
+        // window never takes clicks before the page has drawn what it shows.
+        // The next unlock, with everything on screen, unlocks.
+        state.overlay.hide_all(false);
+        refresh_hide_item(state);
+        refresh_unlock_item(state);
+        let _ = app.emit(SETTINGS_CHANGED, ());
+        return;
+    }
     // The flag is set first and the window is made to match it, then the flag
     // is read again: if another caller changed it meanwhile, the window is
     // set once more, so the two always end up the same. No lock is held over
     // the window calls (they wait for the main thread).
-    state.overlay.unlocked.store(on, Ordering::SeqCst);
+    state.overlay.store_unlocked(on);
     let done = loop {
         let want = state.overlay.unlocked.load(Ordering::SeqCst);
         let result = app
@@ -386,7 +474,13 @@ pub fn set_unlocked(app: &AppHandle, state: &AppState, on: bool) {
         crate::set_status(app, state, |s| s.notice = Some(msg.into()));
     }
     refresh_unlock_item(state);
+    refresh_hide_item(state);
     let _ = app.emit(SETTINGS_CHANGED, ());
+}
+
+/// Whether an unlock only shows a hidden overlay first (T-614).
+fn unlock_shows_first(unlock: bool, hidden: bool) -> bool {
+    unlock && hidden
 }
 
 /// Unlocked, the window takes clicks and keyboard focus (arranging works by
@@ -420,6 +514,30 @@ fn refresh_unlock_item(state: &AppState) {
     if let Some(item) = item {
         let _ = item.set_checked(state.overlay.unlocked());
     }
+}
+
+/// The tray's "hide overlay" entry shows the real state (T-614).
+pub(crate) fn refresh_hide_item(state: &AppState) {
+    let item = lock(&state.overlay.hide_item).clone();
+    if let Some(item) = item {
+        let _ = item.set_checked(state.overlay.all_hidden());
+    }
+}
+
+pub fn keep_hide_item(state: &AppState, item: CheckMenuItem<Wry>) {
+    *lock(&state.overlay.hide_item) = Some(item);
+}
+
+/// The tray's "preview" entry shows the real state (T-614).
+pub(crate) fn refresh_preview_item(state: &AppState) {
+    let item = lock(&state.overlay.preview_item).clone();
+    if let Some(item) = item {
+        let _ = item.set_checked(state.overlay.preview());
+    }
+}
+
+pub fn keep_preview_item(state: &AppState, item: CheckMenuItem<Wry>) {
+    *lock(&state.overlay.preview_item) = Some(item);
 }
 
 /// The tray's "show overlay" entry, so it follows the switch in the window.
@@ -670,7 +788,7 @@ mod tests {
                 );
                 s.theme = Theme::Contrast;
                 s.set_opacity(0.8);
-                s.set_shown(Panel::Tribes, false);
+                s.set_shown(Panel::Heroes, false);
             })
             .unwrap();
         let second = Overlay::default();
@@ -679,9 +797,133 @@ mod tests {
         let view = second.view();
         assert_eq!(view.theme, "contrast");
         assert_eq!(view.opacity, 0.8);
-        assert_eq!(view.hidden, vec![Panel::Tribes]);
+        assert_eq!(view.hidden, vec![Panel::Heroes]);
         assert_eq!(view.layout.panels[&Panel::Opponents], rect(500.0, 120.0));
         assert!(!view.unlocked, "unlocking is never saved");
+    }
+
+    #[test]
+    fn hiding_everything_is_never_saved_and_every_start_begins_shown() {
+        let dir = temp_dir("hide-all");
+        let first = Overlay::default();
+        first.load(&dir, false).unwrap();
+        assert!(!first.all_hidden() && !first.view().all_hidden);
+        first.hide_all(true);
+        assert!(first.view().all_hidden);
+        first.change(|s, _| s.theme = Theme::Contrast).unwrap();
+        let second = Overlay::default();
+        second.load(&dir, false).unwrap();
+        assert!(!second.all_hidden());
+        let text = std::fs::read_to_string(dir.join(PREFS_FILE)).unwrap();
+        assert!(!text.contains("all_hidden"), "not in the saved settings");
+    }
+
+    #[test]
+    fn hiding_never_holds_while_the_layout_is_unlocked() {
+        let overlay = Overlay::default();
+        overlay.store_unlocked(true);
+        // The key read "locked", then the tray unlocked before the hide was stored.
+        assert!(!overlay.hide_all(true));
+        assert!(!overlay.all_hidden() && overlay.unlocked());
+        overlay.store_unlocked(false);
+        assert!(overlay.hide_all(true));
+        assert!(!overlay.hide_all(false));
+    }
+
+    #[test]
+    fn a_hide_and_an_unlock_at_the_same_time_never_end_hidden_and_unlocked() {
+        for _ in 0..2000 {
+            let overlay = Arc::new(Overlay::default());
+            let hide = {
+                let o = overlay.clone();
+                std::thread::spawn(move || o.hide_all(true))
+            };
+            let unlock = {
+                let o = overlay.clone();
+                std::thread::spawn(move || o.store_unlocked(true))
+            };
+            hide.join().unwrap();
+            unlock.join().unwrap();
+            assert!(overlay.unlocked() && !overlay.all_hidden());
+        }
+    }
+
+    #[test]
+    fn unlocking_a_hidden_overlay_only_shows_it_first() {
+        assert!(unlock_shows_first(true, true));
+        assert!(!unlock_shows_first(true, false), "shown: it unlocks");
+        assert!(
+            !unlock_shows_first(false, true),
+            "locking a hidden overlay just locks"
+        );
+    }
+
+    #[test]
+    fn unlocking_shows_everything_again_and_locking_does_not() {
+        let overlay = Overlay::default();
+        overlay.hide_all(true);
+        overlay.store_unlocked(false);
+        assert!(overlay.all_hidden(), "locking keeps it hidden");
+        overlay.store_unlocked(true);
+        assert!(!overlay.all_hidden() && overlay.unlocked());
+    }
+
+    #[test]
+    fn the_preview_is_never_saved_and_the_page_is_told() {
+        let dir = temp_dir("preview");
+        let first = Overlay::default();
+        first.load(&dir, false).unwrap();
+        assert!(!first.preview() && !first.view().preview);
+        first.set_preview(true);
+        assert!(first.view().preview);
+        first.change(|s, _| s.theme = Theme::Contrast).unwrap();
+        let text = std::fs::read_to_string(dir.join(PREFS_FILE)).unwrap();
+        assert!(!text.contains("preview"));
+        let second = Overlay::default();
+        second.load(&dir, false).unwrap();
+        assert!(!second.preview());
+    }
+
+    #[test]
+    fn a_broken_overlay_never_shows_the_preview() {
+        let overlay = Overlay::default();
+        overlay.set_preview(true);
+        assert!(overlay.preview());
+        overlay.disable();
+        assert!(!overlay.preview_allowed() && !overlay.preview() && !overlay.view().preview);
+    }
+
+    #[test]
+    fn the_page_is_told_when_the_hide_key_is_taken() {
+        let overlay = Overlay::default();
+        assert!(!overlay.view().hide_key_taken);
+        overlay.set_hide_key_taken(true);
+        assert!(overlay.view().hide_key_taken);
+    }
+
+    #[test]
+    fn a_file_with_the_old_tribes_panel_loads_without_it() {
+        // The lobby's tribes had their own panel until T-614.
+        let dir = temp_dir("old-tribes");
+        std::fs::write(
+            dir.join(PREFS_FILE),
+            r#"{"enabled":true,"hidden":["tribes","lobby"],"layouts":{"1920x1080":{"panels":{"tribes":{"x":1700,"y":90,"w":220,"h":null},"status":{"x":10,"y":20,"w":300,"h":null}}}},"last_resolution":"1920x1080"}"#,
+        )
+        .unwrap();
+        let overlay = Overlay::default();
+        overlay.load(&dir, false).unwrap();
+        *overlay.screen.lock().unwrap() = (1920.0, 1080.0);
+        let view = overlay.view();
+        assert!(overlay.enabled());
+        assert_eq!(view.hidden, vec![Panel::Lobby]);
+        assert!(!view.layout.panels.contains_key(&Panel::Tribes));
+        assert_eq!(view.layout.panels[&Panel::Status], rect(10.0, 20.0));
+    }
+
+    #[test]
+    fn the_page_has_no_slot_for_the_retired_panels() {
+        assert!(!OVERLAY_HTML.contains(r#"data-panel="tribes""#));
+        assert!(!OVERLAY_HTML.contains(r#"data-panel="legend""#));
     }
 
     #[test]
@@ -826,10 +1068,8 @@ mod tests {
         for panel in [
             Panel::Status,
             Panel::Counters,
-            Panel::Tribes,
             Panel::Opponents,
             Panel::Odds,
-            Panel::Legend,
             Panel::Lobby,
             Panel::Heroes,
         ] {
@@ -847,7 +1087,7 @@ mod tests {
             .skip(1)
             .filter_map(|rest| rest.split('"').next())
             .collect();
-        assert_eq!(scripts.len(), 19);
+        assert_eq!(scripts.len(), 21);
         for script in scripts {
             assert!(ui.join(script).is_file(), "{script} is missing");
         }
@@ -862,6 +1102,8 @@ mod tests {
             include_str!("../ui/overlay-hover.js"),
             include_str!("../ui/overlay-keys.js"),
             include_str!("../ui/overlay-place.js"),
+            include_str!("../ui/legend-toggle.js"),
+            include_str!("../ui/hide-all.js"),
             include_str!("../ui/overlay-words.js"),
             include_str!("../ui/counters-words.js"),
             include_str!("../ui/lobby-words.js"),

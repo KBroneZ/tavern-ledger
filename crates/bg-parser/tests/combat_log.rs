@@ -5,7 +5,7 @@
 //! of all this, only the game-long values (parser revision 10) and the
 //! buffs on board minions (revision 14) reach the saved report's JSON.
 
-use bg_parser::report::{CombatValues, DefenderSource, GameReport, Side, MAX_GAME_VALUE};
+use bg_parser::report::{CombatValues, DefenderSource, Deity, GameReport, Side, MAX_GAME_VALUE};
 use bg_parser::LogReader;
 
 const T: &str = "D 12:00:00.0000000 GameState.DebugPrintPower() - ";
@@ -201,6 +201,60 @@ fn poisonous_and_mega_windfury_are_read_but_not_saved() {
 }
 
 #[test]
+fn a_mark_given_at_the_start_of_combat_is_on_the_first_attack_board_only() {
+    // Fragrant Phylactery fires before the first attack and marks the own
+    // Poisonous minion (T-631).
+    let mut all = game();
+    let first_attack = all
+        .iter()
+        .position(|l| l.contains("BlockType=ATTACK"))
+        .unwrap();
+    let mut power = vec![line(
+        1,
+        "FULL_ENTITY - Creating ID=50 CardID=BG20_HERO_282p",
+    )];
+    for (t, v) in [
+        ("CARDTYPE", "HERO_POWER"),
+        ("CONTROLLER", "2"),
+        ("ZONE", "PLAY"),
+    ] {
+        power.push(line(2, &format!("tag={t} value={v}")));
+    }
+    power.push(line(2, "tag=ENTITY_ID value=50"));
+    power.push(line(
+        0,
+        "BLOCK_START BlockType=TRIGGER Entity=50 EffectCardId=System.Collections.Generic.List`1[System.String] EffectIndex=4 Target=0 SubOption=-1 TriggerKeyword=TRIGGER_VISUAL",
+    ));
+    power.push(line(
+        1,
+        "FULL_ENTITY - Creating ID=60 CardID=BG20_HERO_282e2",
+    ));
+    for (t, v) in [
+        ("CARDTYPE", "ENCHANTMENT"),
+        ("CONTROLLER", "2"),
+        ("ZONE", "PLAY"),
+        ("ATTACHED", "30"),
+    ] {
+        power.push(line(2, &format!("tag={t} value={v}")));
+    }
+    power.push(line(2, "tag=ENTITY_ID value=60"));
+    power.push(line(0, "BLOCK_END"));
+    all.splice(first_attack..first_attack, power);
+    let r = report(&all);
+    let entry = &r.rounds[0].entries[0];
+    let at_attack = entry.board.clone().expect("own board");
+    assert_eq!(at_attack[0].sim_marks, ["BG20_HERO_282e2"]);
+    assert!(at_attack[1].sim_marks.is_empty());
+    let before = entry
+        .before
+        .clone()
+        .expect("the board before start of combat");
+    assert!(before.iter().all(|m| m.sim_marks.is_empty()), "{before:?}");
+    let json = serde_json::to_string(&r).expect("serializable");
+    assert!(!json.contains("282e2") && !json.contains("sim_marks"));
+}
+
+#[test]
 fn the_own_board_now_is_given_in_a_shop_turn_only() {
     let all = game();
     let at = |needle: &str| all.iter().position(|l| l.contains(needle)).unwrap();
@@ -284,6 +338,32 @@ fn value_lines() -> Vec<String> {
         ));
         values.push(line(2, &format!("tag=ENTITY_ID value={id}")));
     }
+    // The player's hidden Deities (T-671): an older one still set aside and
+    // this combat's, the newest; one under the dummy player (an opponent's)
+    // is never read.
+    for (id, controller, (atk, health, progress)) in [
+        (64, 2, (1, 1, 0)),
+        (65, 2, (77, 64, 1)),
+        (66, 10, (50, 50, 0)),
+    ] {
+        values.push(line(
+            1,
+            &format!("FULL_ENTITY - Creating ID={id} CardID=BG_OldGod"),
+        ));
+        for (name, value) in [
+            ("CONTROLLER", controller),
+            ("TAG_SCRIPT_DATA_NUM_1", 4),
+            ("TAG_SCRIPT_DATA_NUM_2", atk),
+            ("TAG_SCRIPT_DATA_NUM_3", health),
+            ("QUEST_PROGRESS", progress),
+            ("BACON_EVOLUTION_CARD_ID", 130_610),
+        ] {
+            values.push(line(2, &format!("tag={name} value={value}")));
+        }
+        values.push(line(2, "tag=CARDTYPE value=SPELL"));
+        values.push(line(2, "tag=ZONE value=SETASIDE"));
+        values.push(line(2, &format!("tag=ENTITY_ID value={id}")));
+    }
     values.push(tag("2", "RESOURCES", "1"));
     values
 }
@@ -318,6 +398,18 @@ fn each_sides_game_long_values_are_read_with_its_board() {
     assert_eq!(of(Side::Opponent).beetle, (12, 11));
     assert_eq!(of(Side::Opponent).undead_attack, 0);
     assert_eq!(of(Side::Opponent).knights_dead, 2);
+    // The newest Deity set aside under the player; none for the opponent.
+    assert_eq!(
+        of(Side::Own).deity,
+        Deity {
+            dbf: 130_610,
+            attack: 77,
+            health: 64,
+            needed: 4,
+            progress: 1,
+        }
+    );
+    assert_eq!(of(Side::Opponent).deity, Deity::default());
 }
 
 /// Enchantments on the combat's minions (T-619): the own 30 has two Blood
@@ -421,7 +513,9 @@ fn each_sides_game_long_values_are_saved_with_its_board_above_zero_only() {
     };
     assert_eq!(
         of("own"),
-        serde_json::json!({"blood_gem_atk": 3, "blood_gem_health": 2, "undead_atk": 7})
+        serde_json::json!({"blood_gem_atk": 3, "blood_gem_health": 2, "undead_atk": 7,
+                           "deity_dbf": 130_610, "deity_atk": 77, "deity_health": 64,
+                           "deity_needed": 4, "deity_progress": 1})
     );
     assert_eq!(
         of("opponent"),
@@ -450,10 +544,18 @@ fn game_long_values_outside_the_saved_bounds_are_left_out() {
         knights_dead: 0,
         undead_attack: i64::MAX,
         beetle: (i64::MIN, 2),
+        deity: Deity {
+            dbf: 130_610,
+            attack: 77,
+            health: MAX_GAME_VALUE + 1,
+            needed: 4,
+            progress: 0,
+        },
     };
     assert_eq!(
         serde_json::to_value(values).expect("serializable"),
-        serde_json::json!({"spell_atk": MAX_GAME_VALUE, "spell_health": 1, "beetle_health": 2})
+        serde_json::json!({"spell_atk": MAX_GAME_VALUE, "spell_health": 1, "beetle_health": 2,
+                           "deity_dbf": 130_610, "deity_atk": 77, "deity_needed": 4})
     );
     assert!(!values.is_empty());
     assert!(CombatValues {

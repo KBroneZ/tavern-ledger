@@ -1,7 +1,7 @@
 // The games list's body (T-503): how many games match, one compact row per
 // game and the pages. Pure: the page script mounts what this returns.
 import { gameCells, gameColumns } from "../data/dashboard.ts";
-import { filtersQuery, pageCount, PAGE_SIZE, type GameFilters } from "../data/filters.ts";
+import { filtersQuery, hasFilters, pageCount, PAGE_SIZE, type GameFilters } from "../data/filters.ts";
 import type { GameRow } from "../data/rows.ts";
 import { t } from "../data/strings.ts";
 import { h, type VNode } from "./node.ts";
@@ -39,6 +39,15 @@ function pager(page: ListPage): VNode | null {
 export function listBody(page: ListPage): VNode[] {
   const invalid = page.invalid.length > 0 ? h("p", { class: "message error" }, t("list.invalid", { names: [...new Set(page.invalid)].join(", ") })) : null;
   if (page.total === 0) {
+    // No games at all is not "no games match": say so, and where the app is (the owner's list only).
+    if (!hasFilters(page.filters)) {
+      const own = page.profileId === null;
+      const empty = stateBlock(
+        { kind: "empty", title: t("list.empty"), body: t(own ? "list.empty.own" : "list.empty.public") },
+        ...(own ? [h("a", { href: href("/download/") }, t("list.empty.own.link"))] : []),
+      );
+      return [invalid, empty].filter((n): n is VNode => n !== null);
+    }
     return [invalid, stateBlock({ kind: "empty", title: t("list.none"), body: t("list.none.body") })].filter((n): n is VNode => n !== null);
   }
   if (page.rows.length === 0) {

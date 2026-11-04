@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACCURACY_FORMAT, CAUSE_IDS, parseAccuracy, parseCardNames, type Accuracy } from "../../src/lib/accuracy/data.ts";
-import { blockingRows, buildsView, calibrationBars, causeRows, modeFigures } from "../../src/lib/accuracy/view.ts";
+import { blockingRows, buildsView, calibrationBars, calibrationMark, causeRows, kitsNote, modeFigures } from "../../src/lib/accuracy/view.ts";
 import { setLang } from "../../src/lib/i18n.ts";
 
 const DATA = join(import.meta.dirname, "..", "..", "src", "data");
@@ -19,7 +19,7 @@ afterEach(() => setLang("en"));
 
 // ---------- The committed export ----------
 
-test("the committed export reads with the export's keys and format 3", () => {
+test("the committed export reads with the export's keys and format 4", () => {
   const data = parseAccuracy(committed());
   assert.equal(data.format, ACCURACY_FORMAT);
   assert.match(data.date, /^\d{4}-\d{2}-\d{2}$/);
@@ -161,7 +161,7 @@ test("Duos figures in English: the counts and the blocked sentence", () => {
   assert.equal(f.right.backing, "166 of 202 combats");
   assert.equal(f.meanP.value, "81%");
   assert.equal(f.blocked.value, "13%");
-  assert.equal(f.blocked.note, "No odds in 13% of Duos combats (30 of 232): a card is not modelled.");
+  assert.equal(f.blocked.note, "No odds in 13% of Duos combats (30 of 232): a card, hero power or trinket is not modelled.");
   assert.equal(f.brier.value, "0.274");
 });
 
@@ -193,7 +193,7 @@ test("nothing scored: dashes, never zero, and the blocked share still shows", ()
 test("no combat blocked: the note says so instead of hiding the share", () => {
   const f = modeFigures(sample().modes.solo, "solo");
   assert.equal(f.blocked.value, "0%");
-  assert.match(f.blocked.note, /^Odds in every Solo combat with a result \(\d+\): no card was missing\.$/);
+  assert.match(f.blocked.note, /^Odds in every Solo combat with a result \(\d+\): nothing was missing\.$/);
 });
 
 test("shares never round to a claim the counts do not make", () => {
@@ -268,8 +268,8 @@ const MISSES = {
 const BUILDS = {
   newest: 260001,
   checked: [
-    { build: 260001, count: 3 },
-    { build: 253216, count: 150 },
+    { build: 260001, count: 3, proven: 0, text_only: 640 },
+    { build: 253216, count: 150, proven: 212, text_only: 428 },
   ],
 };
 
@@ -317,9 +317,12 @@ test("builds: newest must lead the list; bad numbers, repeats and extra keys fai
   assert.throws(bad((b) => (b.checked[1].build = 260001)), /twice|newest first/);
   assert.throws(bad((b) => (b.checked[0].build = -1)), /build/);
   assert.throws(bad((b) => (b.checked[0].count = 0)), /count/);
+  assert.throws(bad((b) => (b.checked[1].proven = -1)), /proven/);
+  assert.throws(bad((b) => (b.checked[1].text_only = 1.5)), /text_only/);
+  assert.throws(bad((b) => delete (b.checked[0] as Record<string, unknown>).proven), /proven/);
   assert.throws(() => parseAccuracy(withBuilds({ newest: null, checked: BUILDS.checked })), /newest/);
   assert.throws(() => parseAccuracy(withBuilds({ ...BUILDS, date: "2026-10-12" })), /date/);
-  assert.throws(() => parseAccuracy(withBuilds({ newest: 1, checked: [{ build: 1, count: 1, session: "x" }] })), /session/);
+  assert.throws(() => parseAccuracy(withBuilds({ newest: 1, checked: [{ build: 1, count: 1, proven: 0, text_only: 1, session: "x" }] })), /session/);
 });
 
 test("every cause id has a name and a one-line why in both languages", () => {
@@ -378,7 +381,10 @@ test("the builds block: newest build, the day, and each build's games", () => {
   assert.deepEqual(en.rows.map((r) => r.build), ["260001", "253216"]);
   assert.equal(en.rows[0].games, "3 games");
   assert.equal(en.rows[1].games, "150 games");
-  const one = buildsView({ newest: 5, checked: [{ build: 5, count: 1 }] }, data.date);
+  assert.equal(en.rows[1].proven, "212");
+  assert.equal(en.rows[1].textOnly, "428");
+  assert.equal(en.rows[0].proven, "0");
+  const one = buildsView({ newest: 5, checked: [{ build: 5, count: 1, proven: 0, text_only: 9 }] }, data.date);
   assert.equal(one.rows[0].games, "1 game");
   setLang("es");
   const es = buildsView(data.builds, data.date);
@@ -392,4 +398,42 @@ test("the cause ids are exactly the ones the Rust side writes (one vocabulary, D
   // Every id the engine's cause functions return, as `=> "id"`; "matched" is not a miss.
   const rust = new Set([...why.matchAll(/=> "([a-z_]+)"/g)].map((m) => m[1]).filter((id) => id !== "matched"));
   assert.deepEqual([...rust].sort(), [...CAUSE_IDS].sort());
+});
+
+test("a calibration group says prediction for one and predictions for more, in both languages", () => {
+  const bar = (predictions: number) => ({ ...calibrationBars([{ from: 0, to: 0.2, predictions, mean_said: predictions ? 0.1 : null, happened: predictions ? 0 : null }])[0] });
+  assert.match(calibrationMark(bar(0)), /no predictions$/);
+  assert.match(calibrationMark(bar(1)), /: 1 prediction,/);
+  assert.match(calibrationMark(bar(2)), /: 2 predictions,/);
+  setLang("es");
+  assert.match(calibrationMark(bar(0)), /sin predicciones$/);
+  assert.match(calibrationMark(bar(1)), /: 1 predicción,/);
+  assert.match(calibrationMark(bar(2)), /: 2 predicciones,/);
+});
+
+test("the kits part is read strictly and its line says both scores, or that no game has kits", () => {
+  const raw = committed();
+  const way = (brier: number | null, right: number) => ({ mean_p_real: brier === null ? null : 0.8, brier, most_likely_right: right });
+  raw.kits = { combats: 12, scored: 10, with: way(0.25, 8), without: way(0.271, 7) };
+  const data = parseAccuracy(raw);
+  const note = kitsNote(data.kits);
+  assert.equal(note.text, "Games saved or re-read by app 0.2.5 or later also keep each hero's powers and trinkets, and their combats are played with them: 12 combats here.");
+  assert.equal(note.scores, "On the 10 of them with odds both ways: Brier 0.250 with the powers and trinkets, 0.271 without.");
+  setLang("es");
+  assert.match(kitsNote(data.kits).text, /12 combates aquí\.$/);
+  assert.match(kitsNote(data.kits).scores ?? "", /^En los 10 .* 0,250 con los poderes y abalorios, 0,271 sin ellos\.$/);
+  setLang("en");
+  raw.kits = { combats: 0, scored: 0, with: way(null, 0), without: way(null, 0) };
+  const none = kitsNote(parseAccuracy(raw).kits);
+  assert.match(none.text, /^No game here was saved/);
+  assert.equal(none.scores, null);
+  for (const bad of [
+    { combats: 1, scored: 2, with: way(0.2, 1), without: way(0.2, 1) },
+    { combats: 2, scored: 2, with: way(null, 0), without: way(0.2, 1) },
+    { combats: 2, scored: 1, with: way(0.2, 2), without: way(0.2, 1) },
+    { combats: 2, scored: 1, with: way(0.2, 1), without: way(0.2, 1), extra: 1 },
+  ]) {
+    raw.kits = bad;
+    assert.throws(() => parseAccuracy(raw), /kits/);
+  }
 });

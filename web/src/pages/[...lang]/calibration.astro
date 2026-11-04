@@ -1,0 +1,124 @@
+---
+// Expected-place calibration (/calibration/, T-655): beside the simulator
+// accuracy page, how close the expected place comes on games the model never
+// saw, per mode and game build. The numbers are what `place-train` wrote as
+// calibration.json, committed as src/data/calibration.json and drawn at build
+// time (no fetch, no script). Until a model is published that file is the
+// empty state, and the page says so plainly: no made-up numbers. The file is
+// read strictly, so a bad one fails the build. Public and indexable.
+import Base from "../../layouts/Base.astro";
+import StatTile from "../../components/data/StatTile.astro";
+import More from "../../components/ui/More.astro";
+import "../../styles/data.css";
+import "../../styles/dash.css";
+import "../../styles/calibration.css";
+import rawCalibration from "../../data/calibration.json";
+import { parseCalibration } from "../../lib/calibration/data.ts";
+import { ct } from "../../lib/calibration/strings.ts";
+import { calibrationView } from "../../lib/calibration/view.ts";
+import { href, langPaths, setLang } from "../../lib/i18n.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+setLang(Astro.props.lang);
+
+const view = calibrationView(parseCalibration(rawCalibration));
+---
+
+<Base backdrop="study" title={st("meta.calibration.title")} description={st("meta.calibration.description")}>
+  <div class="cal">
+    <header class="data-head">
+      <div>
+        <p class="kicker">{ct("page.kicker")}</p>
+        <h1>{ct("page.title")}</h1>
+        <p class="cal-intro">{ct("page.intro")}</p>
+        {view.date && <p class="data-note">{ct("page.date", { date: view.date })}</p>}
+        <p class="data-note">
+          {ct("page.accuracy")} <a href={href("/accuracy/")}>{ct("page.accuracy.link")}</a>
+        </p>
+      </div>
+    </header>
+
+    {
+      view.empty ? (
+        <>
+          <section class="data-section cal-status" aria-labelledby="cal-empty">
+            <h2 id="cal-empty">{ct("empty.label")}</h2>
+            <p>{ct("empty.body", { min: view.minGames })}</p>
+          </section>
+          <section class="data-section" aria-labelledby="cal-next">
+            <h2 id="cal-next">{ct("empty.next.title")}</h2>
+            <p>{ct("empty.next.groups")}</p>
+            <p>{ct("empty.next.thin", { thin: view.thinGames })}</p>
+            <p>{ct("empty.next.distance")}</p>
+          </section>
+        </>
+      ) : (
+        view.modes.map((m) => (
+          <section class="data-section" aria-labelledby={`cal-${m.mode}`}>
+            <h2 id={`cal-${m.mode}`}>{m.name}</h2>
+            {!m.published ? (
+              <p>{m.none}</p>
+            ) : (
+              <>
+                <p>{m.summary}</p>
+                <p class="data-note">{m.readiness}</p>
+                <div class="tiles">
+                  <StatTile hero label={ct("distance.label")} value={m.distance.value} backing={m.distance.backing} backingAlways />
+                </div>
+                <More context={`${ct("distance.label")}, ${m.name}`}>
+                  <p>{ct("distance.more")}</p>
+                </More>
+                <p class="data-note">{m.note}</p>
+                {m.buildsNone && <p>{m.buildsNone}</p>}
+                {m.builds.map((b) => (
+                  <div class="scroll-x" role="region" aria-label={`${m.name}, ${b.caption}`} tabindex="0">
+                    <table class="dtable">
+                      <caption>
+                        <strong>{b.caption}</strong> · {b.summary}
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">{ct("build.col.range")}</th>
+                          <th scope="col" class="num">{ct("build.col.said")}</th>
+                          <th scope="col" class="num">{ct("build.col.real")}</th>
+                          <th scope="col" class="num">{ct("build.col.games")}</th>
+                          <th scope="col" class="num">{ct("build.col.rows")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {b.rows.map((r) => (
+                          <tr>
+                            <th scope="row">{r.range}</th>
+                            {[r.said, r.real, r.games, r.rows].map((value, i) =>
+                              !r.withheld[i] ? (
+                                <td class="num">{value}</td>
+                              ) : (
+                                <td class="num is-unknown">
+                                  <span aria-hidden="true">{value}</span>
+                                  <span class="visually-hidden">{r.why}</span>
+                                </td>
+                              ),
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+                {m.other && <p class="data-note">{m.other}</p>}
+              </>
+            )}
+          </section>
+        ))
+      )
+    }
+
+    <section class="data-section cal-about" aria-labelledby="cal-about">
+      <h2 id="cal-about">{ct("about.title")}</h2>
+      <p>{ct("about.body")}</p>
+      <p>{ct("about.private", { thin: view.thinGames })}</p>
+    </section>
+  </div>
+</Base>

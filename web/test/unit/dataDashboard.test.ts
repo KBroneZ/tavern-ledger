@@ -138,7 +138,7 @@ test("a game's hero (portrait and name) links to the game viewer when its key is
   const html = toHtml(topTable({ caption: "c", columns: gameColumns(false), rows: [cells] }));
   assert.ok(html.includes(`<a class="cell-hero" href="/game/?u=${id}&amp;id=3f2b8c1e-5d4a-4b7e-9c6d-1a2b3c4d5e6f"><span class="pic pic-hero"`), "the portrait is inside the link");
   assert.ok(html.includes('<span class="hero-link">Master Nguyen<span class="visually-hidden">: game of Oct 9, 2026</span></span></span></a></th>'), "and so is the name");
-  assert.ok(html.includes("<td>Oct 9, 2026</td>"), "the date is plain text");
+  assert.ok(html.includes('<td class="nowrap">Oct 9, 2026</td>'), "the date is plain text, on one line");
   assert.equal((gameCells(gameRow(gameRaw({ public_id: "a/b?c" })), false, id)[0] as { href?: string }).href, undefined, "an odd key gets no link");
   assert.equal((gameCells(gameRow(gameRaw()), false)[0] as { href?: string }).href, undefined);
 });

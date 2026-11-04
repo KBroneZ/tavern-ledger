@@ -19,10 +19,10 @@ Runs on the owner's own machine, never in CI. In one go:
      (window closed, power cut) is cleaned up at the start of the next one.
 Only counts are printed: never a path, account id or file name.
 
-Hosted project (default): .local\supabase.env with SUPABASE_URL and
-SUPABASE_SECRET_KEY lines, as for tools\backup_supabase.ps1. -Local uses the
-local stack instead (for testing the script on synthetic data).
-Keys are only read into memory, never printed or written.
+Hosted project (default): the URL and secret key from the DPAPI store that
+tools\supabase_secret.ps1 fills, as for tools\backup_supabase.ps1. -Local uses
+the local stack instead (for testing the script on synthetic data).
+Keys are only decrypted into memory, never printed or written.
 
 .EXAMPLE
 pwsh tools\sim_consented_games.ps1 -Cards $env:TEMP\hsjson\cards.json
@@ -40,6 +40,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'secret_store.ps1')
 
 $repo = Split-Path -Parent $PSScriptRoot
 $workRoot = Join-Path $repo '.local\sim-games'
@@ -47,35 +48,6 @@ $bucket = 'games'
 $timeoutSec = 30
 # A game record is a few hundred KB at most; anything bigger is not one.
 $maxInflatedBytes = 16MB
-
-# As in tools\backup_supabase.ps1.
-function Get-Connection {
-    if ($Local) {
-        $raw = (& npx supabase status -o json 2>$null | Out-String)
-        if ($LASTEXITCODE -ne 0) { throw 'Local stack is not running (npx supabase start).' }
-        $status = ($raw -replace '(?s)^[^{]*', '') | ConvertFrom-Json
-        if (-not $status.SECRET_KEY) { throw 'supabase status gave no SECRET_KEY (update the Supabase CLI).' }
-        return @{ Url = $status.API_URL; Key = $status.SECRET_KEY }
-    }
-    $envFile = Join-Path $repo '.local\supabase.env'
-    if (-not (Test-Path $envFile)) { throw "Missing $envFile (SUPABASE_URL, SUPABASE_SECRET_KEY)." }
-    $vars = @{}
-    foreach ($line in Get-Content $envFile) {
-        if ($line -match '^\s*(SUPABASE_URL|SUPABASE_SECRET_KEY)\s*=\s*(.+?)\s*$') {
-            $vars[$Matches[1]] = $Matches[2].Trim('"')
-        }
-    }
-    if (-not $vars['SUPABASE_URL'] -or -not $vars['SUPABASE_SECRET_KEY']) {
-        throw "$envFile needs SUPABASE_URL and SUPABASE_SECRET_KEY."
-    }
-    if (-not $vars['SUPABASE_SECRET_KEY'].StartsWith('sb_secret_')) {
-        throw 'SUPABASE_SECRET_KEY must be a secret key (sb_secret_...), not a legacy service_role key.'
-    }
-    if ($vars['SUPABASE_URL'] -notmatch '^https://[a-z0-9]+\.supabase\.co$') {
-        throw 'SUPABASE_URL must be https://<project>.supabase.co'
-    }
-    return @{ Url = $vars['SUPABASE_URL']; Key = $vars['SUPABASE_SECRET_KEY'] }
-}
 
 # The secret key goes in apikey only, never as a bearer token.
 function Get-Headers($conn) {
@@ -127,7 +99,7 @@ function Get-Sha256([byte[]]$bytes) {
 if (-not (Test-Path $Cards -PathType Leaf)) { throw "No card data at $Cards (HearthstoneJSON cards.json)." }
 
 Remove-Leftovers
-$conn = Get-Connection
+$conn = Get-SupabaseConnection -Local:$Local
 $stamp = (Get-Date).ToUniversalTime().ToString('yyyyMMdd-HHmmss')
 $dir = Join-Path $workRoot $stamp
 New-Item -ItemType Directory -Force $dir | Out-Null

@@ -87,6 +87,23 @@ impl Combat<'_> {
         }
     }
 
+    /// Gives this minion's Attack and full Health to every other friendly
+    /// minion (the user's logs: Fragrant Phylactery's Deathrattle gave each
+    /// of 5 others +52/+16, the dead minion's Attack and its Health before
+    /// damage).
+    pub(super) fn give_others_own_stats(&mut self, side: usize, src: Source) {
+        let Some((a, h)) = self.own_stats(side, src) else {
+            return;
+        };
+        let me = match src {
+            Source::Unit(uid) => Some(uid),
+            Source::Dead { .. } => None,
+        };
+        for uid in self.friends(side, Tribes::NONE, me) {
+            self.buff(side, uid, a, h);
+        }
+    }
+
     /// Multiplies this minion's Attack and Health (a gain of the difference,
     /// so what follows stat gains sees it).
     pub(super) fn multiply_stats(&mut self, side: usize, uid: u32, attack: i32, health: i32) {

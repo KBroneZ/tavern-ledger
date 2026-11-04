@@ -55,6 +55,44 @@ class RepoLists(unittest.TestCase):
         with self.assertRaises(gbw.DataError):
             gbw.parser_builds(root)
 
+    def test_client_builds_map_a_client_build_to_the_build_its_games_write(self):
+        root = self.make_repo(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+            "pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255_130, 254_477)];\n", {})
+        self.assertEqual(gbw.client_builds(root), {255130: 254477})
+
+    def test_client_builds_list_is_optional(self):
+        root = self.make_repo("pub const TESTED_BUILDS: &[i64] = &[253216];\n", {})
+        self.assertEqual(gbw.client_builds(root), {})
+
+    def test_a_client_build_of_an_untested_game_build_is_an_error(self):
+        root = self.make_repo(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+            "pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254999)];\n", {})
+        with self.assertRaises(gbw.DataError):
+            gbw.client_builds(root)
+
+    def test_a_client_builds_list_that_does_not_parse_is_an_error(self):
+        for body in ("&[(255130_i64, 254477_i64)]", "&[(255130, 254477), /* a; b */]", "&[(255130, 254477), (1,)]"):
+            root = self.make_repo(
+                "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+                f"pub const CLIENT_BUILDS: &[(i64, i64)] = {body};\n", {})
+            with self.subTest(body=body), self.assertRaises(gbw.DataError):
+                gbw.client_builds(root)
+
+    def test_client_builds_may_be_empty_or_span_lines(self):
+        head = "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n"
+        empty = self.make_repo(head + "pub const CLIENT_BUILDS: &[(i64, i64)] = &[];\n", {})
+        self.assertEqual(gbw.client_builds(empty), {})
+        spread = self.make_repo(
+            head + "pub const CLIENT_BUILDS: &[(i64, i64)] = &[\n    (255130, 254477),\n    (255999, 253216),\n];\n", {})
+        self.assertEqual(gbw.client_builds(spread), {255130: 254477, 255999: 253216})
+
+    def test_the_repository_lists_parse(self):
+        repo = Path(__file__).resolve().parent.parent
+        self.assertEqual(gbw.client_builds(repo)[255130], 254477)
+        self.assertIn(254477, gbw.parser_builds(repo))
+
     def test_simulator_builds_list_is_optional(self):
         root = self.make_repo("", {"cards.rs": "pub const X: i32 = 1;\n"})
         self.assertEqual(gbw.simulator_builds(root), [])
@@ -156,6 +194,57 @@ class Report(unittest.TestCase):
         self.assertIn("simulator", text)
         self.assertIn("253216", text)
 
+    def test_each_added_or_changed_minion_has_its_engine_status_and_whether_it_was_proven(self):
+        status = {"BG1_003": "approximate", "BG1_005": "exact"}
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003", "BG1_005"}, [254477], [],
+                                 status=status, proven={"BG1_003"})
+        self.assertIn("- `BG1_003` Buffed: changed; engine: approximate; proven on 254477: yes", text)
+        self.assertIn("- `BG1_004` Fresh: new; engine: not known; proven on 254477: no", text)
+        self.assertIn("- `BG1_005` Known: new; engine: exact; proven on 254477: no", text)
+
+    def test_a_changed_minion_that_was_proven_must_be_proven_again(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003"}, [254477], [],
+                                 status={"BG1_003": "exact"}, proven={"BG1_003", "BG1_005"})
+        self.assertRegex(text, r"(?s)no longer proven.*`BG1_003`")
+        self.assertNotRegex(text, r"(?s)no longer proven[^#]*`BG1_005`")
+
+    def test_each_card_to_implement_or_review_has_its_own_checklist_line(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003", "BG1_005"}, [254477], [],
+                                 status={"BG1_003": "exact", "BG1_005": "exact"}, proven=set())
+        self.assertRegex(text, r"- \[ \] `BG1_004` Fresh: .*test from a logged combat on 255000")
+        self.assertRegex(text, r"- \[ \] `BG1_003` Buffed: ")
+        self.assertNotIn("- [ ] `BG1_005`", text)
+        self.assertIn("never trusted without one", text)
+
+    def test_without_status_data_the_report_is_as_before(self):
+        text = gbw.render_report(255000, 254477, self.diff(), {"BG1_003"}, [254477], [])
+        self.assertNotIn("engine: ", text)
+
+    def test_status_and_proven_files_are_read_and_checked(self):
+        root = Path(tempfile.mkdtemp())
+        data = root / "crates/combat-sim/data"
+        data.mkdir(parents=True)
+        self.assertEqual(gbw.engine_status(root), {})
+        self.assertEqual(gbw.proven_cards(root, 254477), set())
+        (data / "card_status.json").write_text(json.dumps({"format": 1, "cards": {"BG1_003": "exact"}}), encoding="utf-8")
+        (data / "proven_cards.json").write_text(json.dumps({"format": 1, "builds": {"254477": ["BG1_003"]}}), encoding="utf-8")
+        self.assertEqual(gbw.engine_status(root), {"BG1_003": "exact"})
+        self.assertEqual(gbw.proven_cards(root, 254477), {"BG1_003"})
+        self.assertEqual(gbw.proven_cards(root, 253216), set())
+        for bad in ({"format": 1, "cards": {"BG1_003": "maybe"}}, {"format": 1, "cards": {"BG1_003": []}},
+                    {"format": True, "cards": {}}):
+            (data / "card_status.json").write_text(json.dumps(bad), encoding="utf-8")
+            with self.assertRaises(gbw.DataError):
+                gbw.engine_status(root)
+        (data / "proven_cards.json").write_text(json.dumps({"format": 2, "builds": {}}), encoding="utf-8")
+        with self.assertRaises(gbw.DataError):
+            gbw.proven_cards(root, 254477)
+
+    def test_the_repository_status_and_proven_files_read(self):
+        status = gbw.engine_status(gbw.ROOT)
+        self.assertGreater(len(status), 100)
+        self.assertIsInstance(gbw.proven_cards(gbw.ROOT, 254477), set)
+
 
 class Fake:
     """A stand-in for the network and the `gh` command."""
@@ -195,6 +284,36 @@ class Run(unittest.TestCase):
         fake = Fake(listing(*self.builds), {})
         self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
         self.assertEqual(fake.urls, [gbw.LISTING_URL])
+        self.assertEqual(fake.created, [])
+
+    def write_parser(self, extra: str) -> None:
+        (self.root / "crates/bg-parser/src/lib.rs").write_text(
+            "pub const TESTED_BUILDS: &[i64] = &[253216, 254477];\n" + extra, encoding="utf-8")
+
+    def test_a_client_build_whose_games_write_a_tested_build_does_nothing(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254477)];\n")
+        fake = Fake(listing(*self.builds, 255130), {})
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual(fake.urls, [gbw.LISTING_URL])
+        self.assertEqual(fake.created, [])
+
+    def test_the_same_client_build_without_the_mapping_opens_an_issue(self):
+        cards = {254477: [minion("BG1_003")], 255130: [minion("BG1_003")]}
+        fake = Fake(listing(*self.builds, 255130), cards)
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual([title for title, _ in fake.created], ["New game build 255130"])
+
+    def test_a_build_newer_than_every_mapped_client_build_opens_an_issue(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254477)];\n")
+        cards = {254477: [minion("BG1_003")], 255200: [minion("BG1_003"), minion("BG1_004")]}
+        fake = Fake(listing(*self.builds, 255130, 255200), cards)
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 0)
+        self.assertEqual([title for title, _ in fake.created], ["New game build 255200"])
+
+    def test_a_mapping_to_an_untested_game_build_is_bad_data(self):
+        self.write_parser("pub const CLIENT_BUILDS: &[(i64, i64)] = &[(255130, 254999)];\n")
+        fake = Fake(listing(*self.builds, 255130), {})
+        self.assertEqual(gbw.run(self.root, fake.get, fake.gh), 1)
         self.assertEqual(fake.created, [])
 
     def test_older_build_does_nothing(self):

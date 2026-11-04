@@ -5,7 +5,7 @@
 // First: the page's language, before any module draws text (T-508).
 import "../lib/i18n/boot.ts";
 import { loadGames, loadHeroes, profileAccess } from "../lib/dataApi.ts";
-import { parseFilters, type GameFilters } from "../lib/data/filters.ts";
+import { hasFilters, parseFilters, type GameFilters } from "../lib/data/filters.ts";
 import { t } from "../lib/data/strings.ts";
 import { parseProfileId, publicProfilePath } from "../lib/profile.ts";
 import { listBody } from "../lib/view/gamesView.ts";
@@ -124,7 +124,7 @@ async function start(): Promise<void> {
   fillHeroes(heroes, filters.hero);
   formReady();
   mount(body, ...listBody({ ...page, filters, profileId, userId, invalid }));
-  settle(page.total === 0 ? t("list.none") : t("dash.loaded"));
+  settle(page.total === 0 ? t(hasFilters(filters) ? "list.none" : "list.empty") : t("dash.loaded"));
 }
 
 function failed(): void {

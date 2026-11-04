@@ -1,7 +1,8 @@
 // Daily sweep (T-104d). POST /functions/v1/sweep with the service key the
 // function itself uses (the new secret key, D-042; never a legacy key, D-053),
-// or with the sweep token that the scheduled job reads from Vault
-// (X-Sweep-Token; checked by the database, migration 20261010090000):
+// or with the signed, time-bound sweep token that the scheduled job makes from
+// its Vault secret (X-Sweep-Token; checked by the database, migration
+// 20261014180000):
 //   1. public.sweep_housekeeping(): audit entries of deleted accounts (the
 //      T-104a leftover) and every audit entry older than 90 days (D-048),
 //      upload times older than two days and IP counters older than an hour;
@@ -129,10 +130,10 @@ function isServiceRole(req: Request, env: Env): boolean {
     (sameSecret(token, env.serviceKey) || sameSecret(apikey, env.serviceKey));
 }
 
-// What the scheduled job sends: '<unix seconds>.<64 hex>' (an HMAC the database
-// checks, migration 20261014180000), or for a short while the Vault secret
-// itself: 32 random bytes as hex.
-const SWEEP_TOKEN = /^(?:[0-9]{1,12}\.)?[0-9a-f]{64}$/;
+// What the scheduled job sends: '<unix seconds>.<64 hex>', an HMAC the database
+// checks (migration 20261014180000). The Vault secret itself, which the job
+// sent during the cutover, is no longer accepted anywhere.
+const SWEEP_TOKEN = /^[0-9]{1,12}\.[0-9a-f]{64}$/;
 
 /** True if the request carries the scheduled job's sweep token. */
 async function hasSweepToken(req: Request, env: Env, fetchFn: Fetch): Promise<boolean> {

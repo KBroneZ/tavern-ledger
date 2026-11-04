@@ -54,7 +54,12 @@
             "values": {
               "blood_gem_atk": 3,
               "blood_gem_health": 2,
-              "undead_atk": 7
+              "undead_atk": 7,
+              "deity_dbf": 130610,
+              "deity_atk": 77,
+              "deity_health": 64,
+              "deity_needed": 4,
+              "deity_progress": 1
             },
             "kit": {
               "powers": [],

@@ -1,0 +1,106 @@
+---
+// Press kit (/press/, T-704): what Tavern Ledger is in three sentences, the
+// release's facts (lib/site/release.ts, the download page's own source), the
+// logo files, links to the README screenshots, the fan notice and how to get
+// in touch. Public and indexable, static, no script. The screenshots carry
+// card art, so they stay in the repository and the page links to them.
+import Base from "../../layouts/Base.astro";
+import "../../styles/download.css";
+import "../../styles/press.css";
+import { pt } from "../../lib/press/strings.ts";
+import { dateFormat, href, langPaths, setLang } from "../../lib/i18n.ts";
+import { RELEASE, repoUrl } from "../../lib/site/release.ts";
+import { st } from "../../lib/site/strings.ts";
+
+export const getStaticPaths = langPaths;
+// Every string below is drawn in the page's language (T-508).
+const pageLang = setLang(Astro.props.lang);
+
+const CONTACT = "contact@tavernledger.net";
+const published = dateFormat({ day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }, "en-GB").format(
+  new Date(`${RELEASE.date}T00:00:00Z`),
+);
+const facts = [
+  { label: pt("fact.version"), value: pt("fact.version.value", { version: RELEASE.version, date: published }) },
+  { label: pt("fact.windows"), value: pt("fact.windows.value") },
+  { label: pt("fact.price"), value: pt("fact.price.value") },
+  { label: pt("fact.license"), value: pt("fact.license.value") },
+  { label: pt("fact.languages"), value: pt("fact.languages.value") },
+  { label: pt("fact.maker"), value: pt("fact.maker.value") },
+];
+const logos = [
+  { href: "/press/lockup.svg", label: pt("logo.lockup") },
+  { href: "/press/mark.svg", label: pt("logo.mark") },
+  { href: "/press/app-tile.svg", label: pt("logo.tile") },
+  { href: "/icons/icon-512.png", label: pt("logo.icon") },
+  { href: "/social-card.png", label: pt("logo.card") },
+];
+const shots = (["games", "recap", "replay", "home", "accuracy"] as const).map((key) => ({
+  href: `${repoUrl()}/blob/main/docs/screenshots/${{ games: "app-games", recap: "app-recap", replay: "app-combat-replay", home: "web-home", accuracy: "web-accuracy" }[key]}.webp`,
+  label: pt(`shot.${key}`),
+}));
+const termsAnchor = pageLang === "es" ? "9-el-juego" : "9-the-game";
+---
+
+<Base backdrop="study" title={pt("meta.title")} description={pt("meta.description")} layout="reading">
+  <div class="dl press">
+    <header class="dl-head">
+      <p class="kicker">{pt("page.kicker")}</p>
+      <h1>{pt("page.title")}</h1>
+      <p class="lead">{pt("page.lead")}</p>
+    </header>
+
+    <section class="panel" aria-labelledby="press-short">
+      <h2 id="press-short">{pt("short.title")}</h2>
+      <p>{pt("short.1")} {pt("short.2")} {pt("short.3")}</p>
+    </section>
+
+    <section class="panel" aria-labelledby="press-facts">
+      <h2 id="press-facts">{pt("facts.title")}</h2>
+      <dl class="dl-facts">
+        {
+          facts.map((fact) => (
+            <div>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+
+    <section class="panel" aria-labelledby="press-reads">
+      <h2 id="press-reads">{pt("reads.title")}</h2>
+      <p>{pt("reads.body")} <a href={href("/terms/#" + termsAnchor)}>{pt("reads.link")}</a>.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="press-logo">
+      <h2 id="press-logo">{pt("logo.title")}</h2>
+      <img class="press-lockup" src="/press/lockup.svg" width="501" height="91" alt={pt("logo.alt")} />
+      <p>{pt("logo.body")}</p>
+      <ul class="press-files" role="list">
+        {logos.map((file) => <li><a href={file.href} download>{file.label}</a></li>)}
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="press-shots">
+      <h2 id="press-shots">{pt("shots.title")}</h2>
+      <p>{pt("shots.body")}</p>
+      <ul class="press-files" role="list">
+        {shots.map((shot) => <li><a href={shot.href}>{shot.label}</a></li>)}
+      </ul>
+    </section>
+
+    <section class="panel" aria-labelledby="press-please">
+      <h2 id="press-please">{pt("please.title")}</h2>
+      <p>{pt("please.body")}</p>
+      <blockquote class="press-notice"><p>{st("layout.notice")}</p></blockquote>
+    </section>
+
+    <section class="panel" aria-labelledby="press-contact">
+      <h2 id="press-contact">{pt("contact.title")}</h2>
+      <p>{pt("contact.email")} <a href={`mailto:${CONTACT}`}>{CONTACT}</a></p>
+      <p><a href={`${repoUrl()}/issues`}>{pt("contact.github")}</a></p>
+    </section>
+  </div>
+</Base>

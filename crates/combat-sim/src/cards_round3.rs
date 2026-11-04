@@ -13,21 +13,11 @@
 use crate::cards::{approx, exact, Action, CardRules, Trigger};
 use crate::model::Tribes;
 
-const LATER_UNDEAD: &str = "Undead summoned after it died do not get the Attack";
 pub(crate) const IMPROVES: &str = "its bonus grows during the game; the printed one is used";
 const SUMMON_ORDER: &str = "its order with other summon effects is not checked yet";
 
 const fn gain(attack: i32, health: i32) -> Action {
     Action::GainStats { attack, health }
-}
-
-const fn undead_attack(attack: i32) -> Action {
-    Action::BuffAll {
-        attack,
-        health: 0,
-        tribe: Tribes::UNDEAD,
-        others: false,
-    }
 }
 
 const fn on_beast_summon(actions: &'static [Action]) -> Trigger {
@@ -48,14 +38,16 @@ pub const EFFECTS_3: &[(&str, CardRules)] = &[
         "BG35_342_G",
         exact(&[Trigger::FriendlyDeathrattle(&[gain(8, 4)])]),
     ),
-    // Plaguerunner: Deathrattle: your Undead have +2 Attack (golden +4).
+    // Plaguerunner: Deathrattle: your Undead have +2 Attack this game,
+    // wherever they are (golden +4), Undead summoned later in the combat too
+    // (T-645: the owner's logs, Skeletons summoned after it died).
     (
         "BG34_690",
-        approx(LATER_UNDEAD, &[Trigger::Deathrattle(&[undead_attack(2)])]),
+        exact(&[Trigger::Deathrattle(&[Action::UndeadAttackThisGame(2)])]),
     ),
     (
         "BG34_690_G",
-        approx(LATER_UNDEAD, &[Trigger::Deathrattle(&[undead_attack(4)])]),
+        exact(&[Trigger::Deathrattle(&[Action::UndeadAttackThisGame(4)])]),
     ),
     // Banana Slamma: after you summon a Beast in combat, double its Attack
     // (golden: triple).

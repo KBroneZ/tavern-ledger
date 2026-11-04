@@ -18,8 +18,8 @@ import rawAccuracy from "../../data/accuracy.json";
 import rawNames from "../../data/accuracy-cards.json";
 import { MODES, parseAccuracy, parseCardNames } from "../../lib/accuracy/data.ts";
 import { at } from "../../lib/accuracy/strings.ts";
-import { blockingRows, buildsView, calibrationBars, causeRows, dayText, modeFigures } from "../../lib/accuracy/view.ts";
-import { langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
+import { blockingRows, buildsView, calibrationBars, causeRows, dayText, kitsNote, modeFigures } from "../../lib/accuracy/view.ts";
+import { href, langPaths, numberFormat, setLang } from "../../lib/i18n.ts";
 import { st } from "../../lib/site/strings.ts";
 
 export const getStaticPaths = langPaths;
@@ -35,6 +35,7 @@ const modes = MODES.map((mode) => ({
 }));
 const cards = blockingRows(data.blocking_cards, names);
 const causes = causeRows(data.misses.causes);
+const kits = kitsNote(data.kits);
 const builds = buildsView(data.builds, data.date);
 const version = at("page.version", {
   version: data.engine_version,
@@ -51,6 +52,9 @@ const version = at("page.version", {
         <h1>{at("page.title")}</h1>
         <p class="acc-intro">{at("page.intro")}</p>
         <p class="data-note">{version}</p>
+        <p class="data-note">
+          {at("page.calibration")} <a href={href("/calibration/")}>{at("page.calibration.link")}</a>
+        </p>
       </div>
       <div class="dash-switches">
         <Switch kind="detail" />
@@ -155,11 +159,14 @@ const version = at("page.version", {
         builds.rows.length > 0 && (
           <>
             <p class="data-note">{at("builds.desc")}</p>
+            <p class="data-note">{at("builds.proven")}</p>
             <table class="dtable">
               <thead>
                 <tr>
                   <th scope="col">{at("builds.col.build")}</th>
                   <th scope="col" class="num">{at("builds.col.games")}</th>
+                  <th scope="col" class="num">{at("builds.col.proven")}</th>
+                  <th scope="col" class="num">{at("builds.col.text")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,6 +174,8 @@ const version = at("page.version", {
                   <tr>
                     <td>{b.build}</td>
                     <td class="num">{b.games}</td>
+                    <td class="num">{b.proven}</td>
+                    <td class="num">{b.textOnly}</td>
                   </tr>
                 ))}
               </tbody>
@@ -181,6 +190,8 @@ const version = at("page.version", {
       <p>{at("about.body")}</p>
       <More context={at("about.title")}>
         <p>{at("about.more")}</p>
+        <p>{kits.text}</p>
+        {kits.scores && <p class="adv">{kits.scores}</p>}
         <p>{at("about.refresh")}</p>
       </More>
     </section>

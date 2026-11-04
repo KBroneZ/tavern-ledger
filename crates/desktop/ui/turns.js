@@ -312,8 +312,12 @@
     chip.title = c.reason ? t("turns.unknown_reason", { reason: I18n.backend(c.reason) }) : outcomeWord(c.outcome);
     ui.addTip(chip, c.source);
     box.append(chip);
-    const who = ui.el("span", "turn-opponent", c.opponents.map(heroText).join(" + ") || t("turns.opponent_unknown"));
-    who.prepend(...c.opponents.map((h) => art(h.id, "portrait")).filter(Boolean));
+    // The name is its own element: `text-overflow` does not clip the text of a flex box.
+    const said = c.opponents.map(heroText).join(" + ") || t("turns.opponent_unknown");
+    const name = ui.el("span", "turn-opponent-name", said);
+    name.title = said;
+    const who = ui.el("span", "turn-opponent");
+    who.append(...c.opponents.map((h) => art(h.id, "portrait")).filter(Boolean), name);
     box.append(who);
     return box;
   }
@@ -552,7 +556,7 @@
     return part;
   }
 
-  const api = { drawnMinion, buffsOf, tipFacts, tipNode, watchTipEscape, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
+  const api = { result, drawnMinion, buffsOf, tipFacts, tipNode, watchTipEscape, giftMark, giftMarks, rows, combatAt, healthWords, damageWords, damageBadges, damageQuiet, totalsWords, keywordsRecorded, summaryWords, shopFacts, section };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else window.TLTurns = api;
 })();

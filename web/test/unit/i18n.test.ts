@@ -11,6 +11,7 @@ import { basePath, href, isLang, langPaths, pathIn, pathLang, placeholders, plur
 // Each table registers itself when imported.
 import { ACCOUNT_STRINGS } from "../../src/lib/account/strings.ts";
 import { ACC_STRINGS } from "../../src/lib/accuracy/strings.ts";
+import { CAL_STRINGS } from "../../src/lib/calibration/strings.ts";
 import { CH_STRINGS } from "../../src/lib/community/strings.ts";
 import { DL_STRINGS } from "../../src/lib/download/strings.ts";
 import { STRINGS, t } from "../../src/lib/data/strings.ts";
@@ -41,9 +42,9 @@ const ROOT = join(import.meta.dirname, "..", "..");
 
 afterEach(() => setLang("en"));
 
-test("every table is registered: site, account, data, download, game, leaderboards, community, accuracy, simulator, minions", () => {
-  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "community", "data", "download", "game", "leaderboards", "minions", "simulator", "site"]);
-  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CH_STRINGS, DL_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS, MIN_STRINGS];
+test("every table is registered: site, account, data, download, game, leaderboards, community, accuracy, calibration, simulator, minions", () => {
+  assert.deepEqual(TABLES.map((x) => x.name).sort(), ["account", "accuracy", "calibration", "community", "data", "download", "game", "leaderboards", "minions", "simulator", "site"]);
+  const english = [ACCOUNT_STRINGS, ACC_STRINGS, CAL_STRINGS, CH_STRINGS, DL_STRINGS, STRINGS, GAME_STRINGS, LB_STRINGS, SITE_STRINGS, SIM_STRINGS, MIN_STRINGS];
   for (const en of english) assert.ok(TABLES.some((x) => x.en === en));
 });
 

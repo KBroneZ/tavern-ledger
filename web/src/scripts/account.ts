@@ -10,14 +10,17 @@ import {
   loadCommunityConsent,
   loadOwnProfile,
   loadSimulatorConsent,
+  loadTrainingChoice,
   saveCommunityConsent,
   saveProfile,
   saveSimulatorConsent,
+  saveTrainingChoice,
   setNewPassword,
   signIn,
 } from "../lib/api.ts";
 import { checkNewPassword, newPasswordField } from "../lib/auth.ts";
 import { hasLinkParams, parseAuthLink } from "../lib/authLink.ts";
+import { browserStorage, dismissTrainingNotice, showTrainingNotice } from "../lib/account/trainingNotice.ts";
 import { isConfirmed } from "../lib/deleteAccount.ts";
 import { exportFileName } from "../lib/exportData.ts";
 import { checkDisplayName, publicProfilePath } from "../lib/profile.ts";
@@ -98,7 +101,7 @@ async function setUpProfile(user: User): Promise<void> {
   });
 }
 
-/** An opt-in switch with its own form: how to read and save it, and what to say. */
+/** A switch with its own form: how to read and save it, and what to say. */
 interface ConsentSwitch {
   form: string;
   message: string;
@@ -134,10 +137,43 @@ const SIMULATOR: ConsentSwitch = {
   unchanged: "account.simulator.unchanged",
 };
 
+/**
+ * The "train the expected-place model" switch (T-651, D-174): on unless the
+ * account objected, so the box starts as the server says (no row is on).
+ */
+const TRAINING: ConsentSwitch = {
+  form: "training-form",
+  message: "training-message",
+  box: "train_model",
+  load: loadTrainingChoice,
+  save: saveTrainingChoice,
+  savedOn: "account.training.savedOn",
+  savedOff: "account.training.savedOff",
+  unchanged: "account.training.unchanged",
+};
+
+/** The one-time notice about the training use, for accounts made before it. */
+function setUpTrainingNotice(user: User): void {
+  const notice = byId("training-notice");
+  const store = browserStorage();
+  if (!showTrainingNotice(store, user.created_at)) return;
+  show(notice, true);
+  byId<HTMLButtonElement>("training-notice-dismiss").addEventListener("click", () => {
+    dismissTrainingNotice(store);
+    show(notice, false);
+    moveFocus(byId("account-heading"));
+  });
+}
+
 async function setUpSwitch(user: User, sw: ConsentSwitch): Promise<void> {
   const form = byId<HTMLFormElement>(sw.form);
   const message = byId(sw.message);
   const box = field(form, sw.box);
+  const controls = [...form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")];
+  // Until the server's choice is known the switch would show a guess (off,
+  // even for a switch that is on by default): nothing can be changed or sent.
+  form.addEventListener("submit", (event) => event.preventDefault());
+  for (const el of controls) el.disabled = true;
   // The choice as the server last confirmed it.
   let saved: boolean;
   try {
@@ -145,12 +181,10 @@ async function setUpSwitch(user: User, sw: ConsentSwitch): Promise<void> {
     box.checked = saved;
   } catch {
     // Saving an unknown state could turn the switch off, or on, by mistake.
-    for (const el of form.querySelectorAll<HTMLInputElement | HTMLButtonElement>("input, button")) {
-      el.disabled = true;
-    }
     say(message, at("account.setting.loadFailed"), "error");
     return;
   }
+  for (const el of controls) el.disabled = false;
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     const on = box.checked;
@@ -308,7 +342,13 @@ async function showAccount(user: User): Promise<void> {
   setUpExport();
   setUpDelete(user);
   setUpSignOut();
-  await Promise.all([setUpProfile(user), setUpSwitch(user, COMMUNITY), setUpSwitch(user, SIMULATOR)]);
+  setUpTrainingNotice(user);
+  await Promise.all([
+    setUpProfile(user),
+    setUpSwitch(user, COMMUNITY),
+    setUpSwitch(user, SIMULATOR),
+    setUpSwitch(user, TRAINING),
+  ]);
 }
 
 async function start(): Promise<void> {

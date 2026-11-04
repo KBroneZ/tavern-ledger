@@ -10,20 +10,18 @@
   const { listen: onEvent } = window.__TAURI__.event;
   const I18n = window.TLI18n;
 
-  // The counters panel is off until the overlay rework (counters-words.js).
-  const PANEL_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "odds", "legend", "lobby", "heroes"]);
+  // The counters panel can be switched off as a whole (counters-words.js).
+  const PANEL_IDS = window.TLCounters.panelIds(["status", "opponents", "counters", "odds", "lobby", "heroes"]);
   // The panels' names are read when used, so they follow the language.
   const SLOT_NAMES = {
     status: () => I18n.t("ov.slot.status"),
-    counters: () => I18n.t("ov.slot.counters"),
-    tribes: () => I18n.t("ov.slot.tribes"),
     opponents: () => I18n.t("ov.slot.opponents"),
+    counters: () => I18n.t("ov.slot.counters"),
     odds: () => I18n.t("ov.slot.odds"),
-    legend: () => I18n.t("ov.slot.legend"),
     lobby: () => I18n.t("ov.slot.lobby"),
     heroes: () => I18n.t("ov.slot.heroes"),
   };
-  const TOGGLE_IDS = window.TLCounters.panelIds(["status", "counters", "tribes", "opponents", "odds", "lobby", "heroes"]);
+  const TOGGLE_IDS = window.TLCounters.panelIds(["status", "opponents", "counters", "odds", "lobby", "heroes"]);
   const slotName = (id) => SLOT_NAMES[id]();
   const panelTitle = (id) => I18n.t("ov.slot.panel", { name: slotName(id) });
   // Rough limits while dragging; the app enforces the real ones when it saves.
@@ -61,6 +59,12 @@
   // Which selection the buttons were placed next to; they stay put while it is the same.
   let padFor = null;
   let bigSteps = false;
+  // The legend behind the toolbar's "?" (legend-toggle.js).
+  // Opening or closing it changes the toolbar's height: it is placed again so it covers no panel.
+  const legendToggle = window.TLLegend.bind(document, document.getElementById("legend-toggle"), document.getElementById("legend"), () => placeControls());
+  // Everything the overlay draws, hidden and shown by the app (hide-all.js).
+  const hideAll = window.TLHideAll.create(document, document.getElementById("hidden-note"), window);
+  let firstDraw = true;
 
   function px(n) {
     return `${Math.round(n)}px`;
@@ -186,6 +190,9 @@
     document.body.classList.toggle("unlocked", v.unlocked);
     document.getElementById("scrim").hidden = !v.unlocked;
     document.getElementById("toolbar").hidden = !v.unlocked;
+    if (!v.unlocked) legendToggle.close();
+    hideAll.apply(v, { first: firstDraw });
+    firstDraw = false;
     setEditing(v.unlocked);
     rects = { ...v.layout.panels };
     const inStack = [];

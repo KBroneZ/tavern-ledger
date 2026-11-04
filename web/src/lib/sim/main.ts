@@ -14,6 +14,7 @@ import { watchPictureFallback } from "../data/pictures.ts";
 import { t } from "../data/strings.ts";
 import { lang } from "../i18n.ts";
 import { h, mount, type VNode } from "../view/node.ts";
+import { patch } from "../view/patch.ts";
 import { loadGame } from "../game/load.ts";
 import type { GameRecord } from "../game/report.ts";
 import { GAME_FILE_COLUMNS, type GameRow } from "../data/rows.ts";
@@ -65,12 +66,17 @@ let notes: string[] = [];
 
 // ---------- Drawing ----------
 
-/** Redraws a region and puts focus back on the control that had it. */
+/**
+ * Redraws a region and puts focus back on the control that had it. A list in
+ * use stays the same element, so it is not closed and the letters typed in it
+ * are not forgotten by the redraw (T-633).
+ */
 function draw(target: HTMLElement, nodes: VNode[]): void {
   const active = document.activeElement as HTMLElement | null;
   const focus = active && target.contains(active) ? active.dataset.focus : undefined;
   const caret = active instanceof HTMLInputElement && active.type === "search" ? active.selectionStart : null;
-  mount(target, ...nodes);
+  if (active instanceof HTMLSelectElement && target.contains(active)) patch(target, nodes, active);
+  else mount(target, ...nodes);
   // The game's own drawing for the minions, once its textures are in (art/runtime.ts).
   paintMinions(target);
   if (!focus) return;

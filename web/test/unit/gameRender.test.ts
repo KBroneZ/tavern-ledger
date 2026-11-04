@@ -57,7 +57,7 @@ test("render: Simple has the key numbers, the turns and the replays; the rest is
   assert.equal(attr(nodes[0], "class"), "gv-summary");
   const tiles = [...walk(nodes[0])].filter((n) => attr(n, "class")?.split(" ").includes("tile"));
   const label = (n: VNode) => text(n.children[0]);
-  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Damage dealt", "Damage taken", "Final tavern tier"]);
+  assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile").map(label), ["Combats won–lost", "Hero damage dealt", "Hero damage taken", "Final tavern tier"]);
   assert.deepEqual(tiles.filter((n) => attr(n, "class") === "tile adv").map(label), ["Gold spent", "Triples", "Rolls", "Buys", "Sells", "Actions per minute"]);
   // The combats in one short figure; how many back each number only in Advanced,
   // unless the number is partial: one combat's result is unknown, so that line stays in view.
@@ -121,6 +121,24 @@ test("render: a record with no combats shows dashes, not 0 won", () => {
   const all = renderGame(view(rep), null).map(text).join("\n");
   assert.doesNotMatch(all, /0 won/);
   assert.match(all, /Rounds—/);
+});
+
+test("render: expected place is one quiet line until a model ships, in English and Spanish (T-654)", async () => {
+  const { setLang } = await import("../../src/lib/i18n.ts");
+  const placeLine = (nodes: VNode[]) =>
+    nodes.flatMap((n) => [...walk(n)]).filter((n) => attr(n, "class")?.split(" ").includes("gv-place-dash"));
+  const en = placeLine(renderGame(view(), null));
+  assert.equal(en.length, 1);
+  assert.equal(text(en[0]), "Expected place appears once enough games train the model.");
+  setLang("es");
+  try {
+    assert.equal(text(placeLine(renderGame(view(), null))[0]), "El puesto esperado aparece cuando haya partidas suficientes para entrenar el modelo.");
+  } finally {
+    setLang("en");
+  }
+  const rep = soloReport() as Record<string, any>;
+  rep.rounds = [];
+  assert.equal(placeLine(renderGame(view(rep), null)).length, 0, "no combats: nothing to say");
 });
 
 test("render: inferred results are marked and unknown values are dashes, never 0", () => {

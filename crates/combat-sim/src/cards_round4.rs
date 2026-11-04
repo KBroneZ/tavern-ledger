@@ -24,13 +24,13 @@ use crate::model::{Keywords, Tribes};
 const GOLEM: &str = "BG30_MagicItem_442t";
 const BEETLES: &[&str] = &["BG28_603t", "BG28_603t_G"];
 
-const GOLEM_ID: &str = "its Golem's card id is the one the log shows for Jailbird Juggernaut";
+const GOLEM_ID: &str = "its Golem's card id is the one seen in real games for Jailbird Juggernaut";
 const GOLEM_FIRST: &str =
-    "its Golem's card id is from the log; what the card does when its Golem kills the target is not checked";
+    "its Golem's card id is from real games; what the card does when its Golem kills the target is not checked";
 pub(crate) const EARLIER_GAINS: &str =
     "Deathrattles it gained in earlier combats are not on the board";
 pub(crate) const BEETLE_BUFFS: &str =
-    "Beetles' game-long buffs are not in the log, and Beetles summoned later miss this combat's";
+    "Beetles' game-long buffs are not known, and Beetles summoned later miss this combat's";
 const NEIGHBOURS: &str =
     "which neighbour it picks, and neighbours that die with it, are not checked";
 const BOTH_NEIGHBOURS: &str = "neighbours that die with it are not checked";

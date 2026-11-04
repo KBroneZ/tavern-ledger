@@ -12,6 +12,7 @@ export const ES: Record<SiteKey, string> = {
   "layout.privacy": "Privacidad",
   "layout.terms": "Términos",
   "layout.accuracy": "Precisión del simulador",
+  "layout.press": "Kit de prensa",
   "layout.leaderboards": "Clasificaciones",
   "layout.heroes": "Héroes",
   "layout.games": "Tus partidas",
@@ -25,11 +26,24 @@ export const ES: Record<SiteKey, string> = {
   "layout.switch.label": "Read this page in English",
   "layout.socialAlt": "Logotipo de Tavern Ledger, una jarra dibujada con las letras TL, sobre la frase Hearthstone Battlegrounds tracker",
 
+  // Aplicación web instalable (T-637): el aviso del pie, la descripción del manifiesto, la página sin conexión.
+  "layout.install": "Añadir a la pantalla de inicio",
+  "layout.installIos": "Para añadir esta web a tu pantalla de inicio, toca Compartir y luego «Añadir a pantalla de inicio».",
+  "pwa.description": "Tus partidas de Campos de Batalla de Hearthstone: estadísticas, repeticiones y un simulador de combate.",
+  "offline.title": "Sin conexión",
+  "offline.description": "No hay conexión y esta página no está guardada en tu dispositivo.",
+  "offline.lead": "No hay conexión y esta página no está guardada en tu dispositivo. Las páginas que abriste antes siguen funcionando; tus partidas necesitan conexión, salvo las que guardaste en este dispositivo.",
+  "offline.saved.title": "Guardadas en este dispositivo",
+  "offline.saved.lead": "Estas partidas se abren sin conexión.",
+  "offline.saved.fallback": "Partida guardada",
+  "offline.retry": "Volver a intentarlo",
+  "offline.back": "Ir al inicio",
+
   // Page titles and descriptions.
-  "meta.index.title": "Tus partidas de Campos de Batalla, guardadas para ti",
+  "meta.index.title": "Tracker gratuito de Campos de Batalla de Hearthstone para Windows",
   "meta.index.description":
     "Registro gratuito y de código abierto para Campos de Batalla en Windows. Lee los archivos de registro del juego y tiene una web para seguir tu progreso.",
-  "meta.download.title": "Descargar para Windows",
+  "meta.download.title": "Descarga el tracker gratuito de Campos de Batalla para Windows",
   "meta.download.description":
     "Descarga la beta de Tavern Ledger para Windows 10 y 11: una aplicación gratuita que guarda tus partidas de Campos de Batalla de Hearthstone. Cuatro pasos sencillos para instalarla.",
   "meta.privacy.title": "Privacidad",
@@ -55,6 +69,9 @@ export const ES: Record<SiteKey, string> = {
   "meta.accuracy.title": "Precisión del simulador",
   "meta.accuracy.description":
     "Cuántas veces aciertan las probabilidades de combate de Tavern Ledger, medido con combates reales de Campos de Batalla, por modo y con el porcentaje de combates sin probabilidades al lado de cada cifra.",
+  "meta.calibration.title": "Calibración del puesto esperado",
+  "meta.calibration.description":
+    "Cuánto se acerca el puesto esperado de Tavern Ledger, comprobado con partidas de Campos de Batalla que el modelo nunca vio, por modo y versión del juego, con las partidas que hay detrás de cada cifra. Aún no hay ningún modelo publicado.",
   "meta.signin.title": "Iniciar sesión",
   "meta.signin.description": "Inicia sesión o crea una cuenta de Tavern Ledger.",
   "meta.account.title": "Tu cuenta",
@@ -120,7 +137,7 @@ export const ES: Record<SiteKey, string> = {
   "home.keeps.recap.body": "Tu vida a lo largo de las rondas y tu historial contra cada rival.",
   "home.safe.title": "Qué hace con tu juego",
   "home.safe.body":
-    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Por defecto, también lee de la memoria del juego, en modo solo lectura y solo en tu PC, dos cosas que el juego ya te muestra: las tribus de la partida y tu propia puntuación. Puedes desactivarlo en Ajustes. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya, como dicen los términos.",
+    "Lee los archivos de registro que el juego ya escribe en tu PC y, para la superposición, dónde está tu puntero sobre la ventana del juego. Por defecto, también lee de la memoria del juego, en modo solo lectura y solo en tu PC, dos cosas que el juego ya te muestra: los tipos de esbirro de la partida y tu propia puntuación. Puedes desactivarlo en Ajustes. Va contra la letra de las normas de Blizzard y la cuenta en riesgo es la tuya, como dicen los términos.",
   "home.safe.1":
     "Nunca modifica el juego ni le añade código. Los únicos archivos que puede escribir son los dos archivos de ajustes de registro de Hearthstone, y solo cuando pulsas Arreglar, con copia de seguridad.",
   "home.safe.2": "Nunca juega ni hace clic por ti.",
@@ -145,6 +162,12 @@ export const ES: Record<SiteKey, string> = {
   "news.heroes.link": "Estadísticas de héroes",
   "news.simulator": "Un simulador de combates en la web: carga un tablero de una de tus partidas, cámbialo y simula el combate.",
   "news.simulator.link": "Simulador",
+  "news.app027": "Versión 0.2.7 de la app: un overlay más sencillo (los tipos encima de los rivales, los contadores debajo, Ctrl+Mayús+H para ocultarlo, una vista previa desde la bandeja) y un resumen de hoy y esta semana en la ventana principal.",
+  "news.app027.link": "Descargar",
+  "news.app026": "Versión 0.2.6 de la app: menos combates sin probabilidades (el simulador conoce todos los poderes de héroe y abalorios), un botón para copiar el diagnóstico y una casilla al desinstalar que borra tus partidas solo si la marcas.",
+  "news.app026.link": "Descargar",
+  "news.accuracykits": "La página de precisión ahora juega cada tablero guardado con sus poderes de héroe y abalorios.",
+  "news.accuracykits.link": "Precisión del simulador",
   "news.app025": "Versión 0.2.5 de la app: las probabilidades de combate juegan el inicio del combate, los poderes de héroe y los abalorios, y el overlay muestra una estimación inicial al empezar cada combate.",
   "news.app025.link": "Descargar",
   "news.simkits": "El simulador de la web acepta el poder de héroe y los abalorios de cada tablero, y juega el inicio del combate en los tableros que montas.",
