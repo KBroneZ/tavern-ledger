@@ -3899,7 +3899,7 @@
     },
     "97bdfc528fe2156f": {
       "build": 253216,
-      "close": false,
+      "close": true,
       "likely": "lost",
       "mode": "duos",
       "replay": null,
@@ -6683,7 +6683,7 @@
       "said": "odds"
     }
   },
-  "engine": "0.21.0",
+  "engine": "0.22.0",
   "format": 1,
   "seed": 24301,
   "trials": 2000
