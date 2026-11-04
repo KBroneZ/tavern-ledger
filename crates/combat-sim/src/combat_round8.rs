@@ -98,7 +98,7 @@ impl Combat<'_> {
                 base.keywords,
             );
             let uid = unit.uid;
-            if !self.sides[side].insert(at + k, unit) {
+            if !self.insert_summon(side, src, at + k, unit) {
                 break;
             }
             self.after_summon(side, uid);

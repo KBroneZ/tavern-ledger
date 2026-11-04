@@ -33,6 +33,7 @@ impl Combat<'_> {
             1
         };
         self.sides[side].next = ix + 1;
+        self.sides[side].last_attacker = Some(uid);
         for _ in 0..swings {
             if self.finished() {
                 break;
