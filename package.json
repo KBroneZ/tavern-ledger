@@ -8,6 +8,6 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.4",
-    "supabase": "2.122.0"
+    "supabase": "3.0.0"
   }
 }
