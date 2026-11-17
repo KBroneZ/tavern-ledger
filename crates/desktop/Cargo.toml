@@ -26,7 +26,7 @@ tauri-plugin-autostart = "=2.7.0"
 tauri-plugin-global-shortcut = "=2.4.1"
 # Self-update from the project's signed GitHub releases (T-105b). Windows'
 # own TLS like the uploader; no zip (only for Tauri v1 update bundles).
-tauri-plugin-updater = { version = "=2.14.0", default-features = false, features = ["native-tls", "system-proxy"] }
+tauri-plugin-updater = { version = "=2.14.1", default-features = false, features = ["native-tls", "system-proxy"] }
 # The verifier the plugin uses; here only to tell a real public key from the
 # placeholder before the plugin is turned on.
 minisign-verify = "0.3"
@@ -35,7 +35,7 @@ base64 = "0.23"
 reqwest = { version = "0.13", default-features = false }
 # The system's folder picker for "Hearthstone folder" in the settings (T-579).
 # Pinned, a release from January 2026; no default features (no Linux portals).
-rfd = { version = "=0.17.2", default-features = false }
+rfd = { version = "=0.18.0", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Redacts the error log's lines (T-580): names, ids, emails, tokens, paths.
