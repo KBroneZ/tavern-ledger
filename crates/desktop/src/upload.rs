@@ -267,7 +267,7 @@ fn run(app: AppHandle, data_dir: PathBuf, tx: Sender<Msg>, rx: Receiver<Msg>) {
                 notice = Some(None);
                 // The browser pages follow the app's language, as of this attempt.
                 let lang = match app.state::<Arc<Settings>>().language() {
-                    Language::En => Lang::En,
+                    Language::En | Language::Ru => Lang::En,
                     Language::Es => Lang::Es,
                 };
                 sign_in_thread(&engine, email, lang, tx.clone(), flag);

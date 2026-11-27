@@ -19,26 +19,38 @@ const read = (file) => fs.readFileSync(file, "utf8");
 const scripts = () => fs.readdirSync(UI).filter((f) => f.endsWith(".js")).map((f) => [f, read(path.join(UI, f))]);
 const pages = () => fs.readdirSync(UI).filter((f) => f.endsWith(".html")).map((f) => [f, read(path.join(UI, f))]);
 
-test("every string table loads and has both languages", () => {
+test("every string table loads and has all languages", () => {
   assert.ok(files.includes("common.js"));
   files.forEach((f) => {
     const table = require(path.join(STRINGS, f));
-    assert.ok(table.en && table.es, f);
+    assert.ok(table.en && table.es && table.ru, f);
   });
 });
 
-test("no key is missing in Spanish, and Spanish has no key English lacks", () => {
+test("no key is missing in Spanish or Russian, and neither has unexpected extra keys", () => {
   const en = Object.keys(tables.en);
   const es = Object.keys(tables.es);
+  const ru = Object.keys(tables.ru);
   assert.deepEqual(en.filter((k) => !(k in tables.es)), [], "missing in Spanish");
   assert.deepEqual(es.filter((k) => !(k in tables.en)), [], "only in Spanish");
+  assert.deepEqual(en.filter((k) => !(k in tables.ru)), [], "missing in Russian");
+  const extraRu = ru.filter((k) => !(k in tables.en) && !(/\.(few|many)$/.test(k) && k.replace(/\.(few|many)$/, ".one") in tables.en));
+  assert.deepEqual(extraRu, [], "unexpected keys only in Russian");
 });
 
 test("no string is empty and each translation has the same placeholders", () => {
   for (const [key, text] of Object.entries(tables.en)) {
     assert.ok(String(text).trim(), `en ${key} is empty`);
     assert.ok(String(tables.es[key]).trim(), `es ${key} is empty`);
-    assert.deepEqual(placeholders(tables.es[key]), placeholders(text), key);
+    assert.ok(String(tables.ru[key]).trim(), `ru ${key} is empty`);
+    assert.deepEqual(placeholders(tables.es[key]), placeholders(text), `es ${key}`);
+    assert.deepEqual(placeholders(tables.ru[key]), placeholders(text), `ru ${key}`);
+  }
+  for (const [key, text] of Object.entries(tables.ru)) {
+    if (key in tables.en) continue;
+    assert.ok(String(text).trim(), `ru ${key} is empty`);
+    const base = key.replace(/\.(few|many)$/, ".one");
+    assert.deepEqual(placeholders(text), placeholders(tables.en[base]), `ru ${key}`);
   }
 });
 
@@ -95,7 +107,9 @@ test("every tribe, source, keyword, mode and result has its words", () => {
 
 test("the language is the saved choice, else the system's, else English", () => {
   assert.equal(I18n.pick("es", ["en-US"]), "es");
+  assert.equal(I18n.pick("ru", ["en-US"]), "ru");
   assert.equal(I18n.pick("en", ["es-ES"]), "en");
+  assert.equal(I18n.pick(null, ["ru-RU", "en-US"]), "ru");
   assert.equal(I18n.pick(null, ["es-MX", "en-US"]), "es");
   assert.equal(I18n.pick(null, ["fr-FR", "es-ES"]), "es");
   assert.equal(I18n.pick(undefined, ["fr-FR"]), "en");
@@ -109,6 +123,8 @@ test("a string fills its placeholders and a missing key shows the key", () => {
   assert.equal(I18n.t("no.such.key"), "no.such.key");
   // A placeholder without a value stays visible rather than turning into "undefined".
   assert.equal(I18n.t("settings.language.system"), "Idioma de Windows ({name})");
+  I18n.setLang("ru");
+  assert.equal(I18n.t("settings.language.system", { name: "Русский" }), "Язык Windows (Русский)");
   I18n.setLang("en");
   assert.equal(I18n.t("settings.language.system", { name: "English" }), "Windows language (English)");
 });
@@ -127,6 +143,12 @@ test("numbers, shares and dates are written the language's way", () => {
   assert.equal(I18n.date(d), "09/10/2026");
   assert.match(I18n.dateTime(d), /09\/10\/2026,? 15:26/);
   assert.equal(I18n.list(["a", "b", "c"]), "a, b y c");
+  I18n.setLang("ru");
+  assert.equal(I18n.num(2.5, 2), "2,50");
+  assert.match(I18n.percent(0.5), /^50\s%$/);
+  assert.equal(I18n.date(d), "09.10.2026");
+  assert.match(I18n.dateTime(d), /09\.10\.2026,? 15:26/);
+  assert.equal(I18n.list(["a", "b", "c"]), "a, b и c");
   I18n.setLang("en");
   assert.equal(I18n.list(["a", "b", "c"]), "a, b and c");
 });
@@ -136,18 +158,30 @@ test("a fixed sentence from the app is translated, any other is shown as written
   assert.equal(I18n.backend("In the main menu"), "En el menú principal");
   assert.equal(I18n.backend("Could not save the report (NotFound)."), "Could not save the report (NotFound).");
   assert.equal(I18n.backend(null), null);
+  I18n.setLang("ru");
+  assert.equal(I18n.backend("In the main menu"), "В главном меню");
+  assert.equal(I18n.backend("Could not save the report (NotFound)."), "Could not save the report (NotFound).");
   I18n.setLang("en");
   assert.equal(I18n.backend("In the main menu"), "In the main menu");
 });
 
 test("plural forms follow the language", () => {
-  I18n.define({ en: { "test.games.one": "{n} game", "test.games.other": "{n} games" }, es: { "test.games.one": "{n} partida", "test.games.other": "{n} partidas" } });
+  I18n.define({
+    en: { "test.games.one": "{n} game", "test.games.other": "{n} games" },
+    es: { "test.games.one": "{n} partida", "test.games.other": "{n} partidas" },
+    ru: { "test.games.one": "{n} игра", "test.games.few": "{n} игры", "test.games.many": "{n} игр", "test.games.other": "{n} игр" },
+  });
   I18n.setLang("en");
   assert.equal(I18n.plural("test.games", 1), "1 game");
   assert.equal(I18n.plural("test.games", 0), "0 games");
   I18n.setLang("es");
   assert.equal(I18n.plural("test.games", 1), "1 partida");
   assert.equal(I18n.plural("test.games", 2), "2 partidas");
+  I18n.setLang("ru");
+  assert.equal(I18n.plural("test.games", 1), "1 игра");
+  assert.equal(I18n.plural("test.games", 2), "2 игры");
+  assert.equal(I18n.plural("test.games", 5), "5 игр");
+  assert.equal(I18n.plural("test.games", 21), "21 игра");
   I18n.setLang("en");
 });
 
@@ -166,6 +200,11 @@ test("the markup's words and attributes are set from the table", () => {
   assert.equal(nodes[0].textContent, "Ajustes");
   assert.equal(nodes[1].attrs["aria-label"], "Ajustes");
   assert.equal(nodes[1].attrs.title, "Ajustes");
+  I18n.setLang("ru");
+  I18n.apply(root);
+  assert.equal(nodes[0].textContent, "Настройки");
+  assert.equal(nodes[1].attrs["aria-label"], "Настройки");
+  assert.equal(nodes[1].attrs.title, "Настройки");
   I18n.setLang("en");
 });
 
@@ -183,6 +222,11 @@ test("the setup box's lines are translated with their paths and settings kept", 
   // A file the app cannot find a place for is "cannot check", never "missing" (T-376).
   assert.equal(I18n.backend("client.config could not be checked: no Hearthstone folder is in use."), "No se puede comprobar client.config: no se está usando ninguna carpeta de Hearthstone.");
   assert.equal(I18n.backend("log.config could not be checked: this PC's local data folder is not known."), "No se puede comprobar log.config: no se conoce la carpeta de datos locales de este PC.");
+  I18n.setLang("ru");
+  assert.match(I18n.backend(missing), /^Файл client\.config не найден \(D:\/Games\/client\.config\)\./);
+  assert.match(I18n.backend(lines), /^В файле log\.config \(D:\/a b\/log\.config\) нужны следующие строки в разделе \[Power\]:/);
+  assert.match(I18n.backend(locked), /^Не удалось прочитать log\.config \(PermissionDenied\): D:\/x\/log\.config\./);
+  assert.match(I18n.backend(optional), /^Необязательно: в файл log\.config \(D:\/x\/log\.config\) можно добавить в раздел \[LoadingScreen\]/);
   I18n.setLang("en");
   assert.equal(I18n.backend(missing), missing);
 });
@@ -196,6 +240,9 @@ test("the folder lines from the app are translated with the path kept", () => {
   assert.equal(I18n.backend(gone), "La carpeta de Hearthstone que elegiste (E:\Program Files (x86)\Hearthstone) no se puede usar. No se ha encontrado esa carpeta. Elígela de nuevo o vuelve a la búsqueda automática.");
   const refused = "Hearthstone.exe is not in that folder, and it has no Logs folder with game sessions.";
   assert.equal(I18n.backend(refused), "Hearthstone.exe no está en esa carpeta y no tiene una carpeta Logs con partidas.");
+  I18n.setLang("ru");
+  assert.match(I18n.backend(none), /^Tavern Ledger не удалось найти Hearthstone на этом ПК\./);
+  assert.match(I18n.backend(gone), /^Выбранную папку Hearthstone \(.*\) нельзя использовать\. Эта папка не найдена\./);
   I18n.setLang("en");
   assert.equal(I18n.backend(gone), gone);
 });
@@ -215,6 +262,8 @@ test("the warning about another upload server is translated with its address kep
   I18n.setLang("es");
   const warning = "Uploads go to https://other.example, not to Tavern Ledger's own server.";
   assert.equal(I18n.backend(warning), "Las subidas van a https://other.example, no al servidor de Tavern Ledger.");
+  I18n.setLang("ru");
+  assert.equal(I18n.backend(warning), "Отправка идёт на https://other.example, а не на сервер Tavern Ledger.");
   I18n.setLang("en");
   assert.equal(I18n.backend(warning), warning);
 });
@@ -235,6 +284,9 @@ test("why a game's lines could not be read is translated with what to do", () =>
   );
   assert.equal(I18n.backend("skipped 1 unreadable log line"), "Se ha omitido 1 línea ilegible del registro");
   assert.equal(I18n.backend("skipped 7 unreadable log lines"), "Se han omitido 7 líneas ilegibles del registro");
+  I18n.setLang("ru");
+  assert.equal(I18n.backend("skipped 1 unreadable log line"), "Пропущена 1 нечитаемая строка журнала");
+  assert.equal(I18n.backend("skipped 7 unreadable log lines"), "Пропущено нечитаемых строк журнала: 7");
   I18n.setLang("en");
   assert.equal(I18n.backend("skipped 7 unreadable log lines"), "skipped 7 unreadable log lines");
 });
