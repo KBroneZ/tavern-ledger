@@ -32,6 +32,7 @@ pub enum Language {
     #[default]
     En,
     Es,
+    Ru,
 }
 
 /// Simple or Advanced for the main window (T-344, D-067). The overlay has
@@ -316,6 +317,18 @@ pub fn tray_words(language: Language) -> TrayWords {
             quit: "Salir",
             tooltip: "Tavern Ledger: sigue tus partidas de Campos de Batalla",
         },
+        Language::Ru => TrayWords {
+            show: "Открыть Tavern Ledger",
+            overlay: "Показывать оверлей во время игры",
+            unlock: "Разблокировать оверлей для перемещения и изменения панелей",
+            reset_layout: "Сбросить расположение оверлея",
+            hide_all: "Скрыть оверлей (Ctrl+Shift+H)",
+            preview: "Предпросмотр оверлея с тестовыми данными",
+            autostart: "Запускать с Windows",
+            autostart_unavailable: "Запускать с Windows (недоступно в этой версии приложения)",
+            quit: "Выход",
+            tooltip: "Tavern Ledger: отслеживание ваших игр на Полях сражений",
+        },
     }
 }
 
@@ -516,6 +529,13 @@ mod tests {
         })
         .unwrap();
         assert_eq!(text, r#"{"language":"es","window_detail":"simple"}"#);
+        let ru = serde_json::to_string(&Saved {
+            language: Some(Language::Ru),
+            window_detail: Detail::Simple,
+            ..Saved::default()
+        })
+        .unwrap();
+        assert_eq!(ru, r#"{"language":"ru","window_detail":"simple"}"#);
     }
 
     #[test]
@@ -609,13 +629,15 @@ mod tests {
 
     #[test]
     fn the_tray_menu_has_every_word_in_every_language() {
-        for language in [Language::En, Language::Es] {
+        for language in [Language::En, Language::Es, Language::Ru] {
             let w = tray_words(language);
             for word in [
                 w.show,
                 w.overlay,
                 w.unlock,
                 w.reset_layout,
+                w.hide_all,
+                w.preview,
                 w.autostart,
                 w.autostart_unavailable,
                 w.quit,
@@ -625,5 +647,7 @@ mod tests {
             }
         }
         assert_ne!(tray_words(Language::En), tray_words(Language::Es));
+        assert_ne!(tray_words(Language::En), tray_words(Language::Ru));
+        assert_ne!(tray_words(Language::Es), tray_words(Language::Ru));
     }
 }

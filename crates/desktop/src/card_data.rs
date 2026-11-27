@@ -5,8 +5,8 @@
 //!
 //! Names follow the app's language: the English card data
 //! always (the app's logic, the pool and the art rely on it), and the
-//! Spanish one, fetched and kept only once a page asks for Spanish names.
-//! A name the Spanish data lacks comes from the English data.
+//! Spanish or Russian one, fetched and kept only once a page asks for them.
+//! A name a localized store lacks comes from the English data.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -52,6 +52,10 @@ pub struct Cards {
     spanish: OnceLock<Arc<CardStore>>,
     /// A page asked for Spanish names: the worker keeps that data current.
     wants_spanish: Arc<AtomicBool>,
+    /// The Russian names (`card-cache/ruRU`).
+    russian: OnceLock<Arc<CardStore>>,
+    /// A page asked for Russian names: the worker keeps that data current.
+    wants_russian: Arc<AtomicBool>,
     /// The game's minion textures (D-150), kept beside the card art.
     textures: OnceLock<Arc<TextureStore>>,
     /// Why there are no names or art at all (the HTTPS client did not start).
@@ -89,7 +93,7 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
     let _ = cards.textures.set(textures.clone());
     let spanish = Arc::new(CardStore::open_locale(
         data_dir.join("card-cache").join(Locale::EsEs.code()),
-        Box::new(fetch),
+        Box::new(fetch.clone()),
         Locale::EsEs,
     ));
     let _ = cards.spanish.set(spanish.clone());
@@ -97,7 +101,18 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
     if spanish.has_data() {
         cards.wants_spanish.store(true, Ordering::SeqCst);
     }
+    let russian = Arc::new(CardStore::open_locale(
+        data_dir.join("card-cache").join(Locale::RuRu.code()),
+        Box::new(fetch),
+        Locale::RuRu,
+    ));
+    let _ = cards.russian.set(russian.clone());
+    // Kept from an earlier start in Russian: kept current too.
+    if russian.has_data() {
+        cards.wants_russian.store(true, Ordering::SeqCst);
+    }
     let wants_spanish = cards.wants_spanish.clone();
+    let wants_russian = cards.wants_russian.clone();
     let app = app.clone();
     thread::spawn(move || {
         let mut shown = store.status();
@@ -105,6 +120,9 @@ pub fn start(app: &AppHandle, data_dir: &Path) {
             let mut changed = store.refresh_if_due(now());
             if wants_spanish.load(Ordering::SeqCst) {
                 changed |= spanish.refresh_if_due(now());
+            }
+            if wants_russian.load(Ordering::SeqCst) {
+                changed |= russian.refresh_if_due(now());
             }
             let status = store.status();
             if changed || status != shown {
@@ -206,7 +224,7 @@ pub fn store_with_data(cards: &Cards) -> Option<&CardStore> {
         .filter(|store| store.has_data())
 }
 
-/// `lang` is the app's language as the pages name it ("en", "es"); any
+/// `lang` is the app's language as the pages name it ("en", "es", "ru"); any
 /// other value is English.
 #[tauri::command]
 pub fn card_names(
@@ -219,6 +237,10 @@ pub fn card_names(
         Some("es") => {
             cards.wants_spanish.store(true, Ordering::SeqCst);
             cards.spanish.get().map(Arc::as_ref)
+        }
+        Some("ru") => {
+            cards.wants_russian.store(true, Ordering::SeqCst);
+            cards.russian.get().map(Arc::as_ref)
         }
         _ => None,
     };

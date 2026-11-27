@@ -28,6 +28,7 @@ pub const DATA_URL: &str = "https://api.hearthstonejson.com/v1/latest/enUS/cards
 pub enum Locale {
     EnUs,
     EsEs,
+    RuRu,
 }
 
 impl Locale {
@@ -36,6 +37,7 @@ impl Locale {
         match self {
             Locale::EnUs => "enUS",
             Locale::EsEs => "esES",
+            Locale::RuRu => "ruRU",
         }
     }
 

@@ -113,7 +113,7 @@ test("the ? looks pressed while its legend is open", () => {
   assert.match(read("overlay.css"), /\.toolbar button\[aria-expanded="true"\] \{[^}]*border-color: var\(--accent\)/);
 });
 
-test("the ? has a name in both languages", () => {
+test("the ? has a name in all languages", () => {
   const strings = read("strings/overlay.js");
-  assert.equal((strings.match(/"ov\.toolbar\.legend": "[^"]+"/g) || []).length, 2);
+  assert.equal((strings.match(/"ov\.toolbar\.legend": "[^"]+"/g) || []).length, 3);
 });

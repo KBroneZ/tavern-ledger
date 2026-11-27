@@ -286,6 +286,7 @@ fn picker_title(language: Language) -> &'static str {
     match language {
         Language::En => "Choose the Hearthstone folder",
         Language::Es => "Elige la carpeta de Hearthstone",
+        Language::Ru => "Выберите папку Hearthstone",
     }
 }
 
@@ -487,6 +488,8 @@ mod tests {
     #[test]
     fn the_picker_has_a_title_in_each_language() {
         assert_ne!(picker_title(Language::En), picker_title(Language::Es));
+        assert_ne!(picker_title(Language::En), picker_title(Language::Ru));
+        assert_ne!(picker_title(Language::Es), picker_title(Language::Ru));
     }
 
     #[test]

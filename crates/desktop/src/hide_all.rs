@@ -270,12 +270,13 @@ mod tests {
     }
 
     #[test]
-    fn the_tray_item_names_the_same_key_as_the_page_in_both_languages() {
+    fn the_tray_item_names_the_same_key_as_the_page_in_all_languages() {
         use crate::settings::{tray_words, Language};
         let page = include_str!("../ui/strings/overlay.js");
         for (language, name) in [
             (Language::En, "Ctrl+Shift+H"),
             (Language::Es, "Ctrl+Mayús+H"),
+            (Language::Ru, "Ctrl+Shift+H"),
         ] {
             assert!(tray_words(language).hide_all.contains(name), "{language:?}");
             assert!(
